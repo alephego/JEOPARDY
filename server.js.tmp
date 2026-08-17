@@ -1,0 +1,392 @@
+
+const path = require("path");
+const fs = require("fs");
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const crypto = require("crypto");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+const PORT = process.env.PORT || 3000;
+const MAX_PLAYERS = 10;
+
+
+const GAMES_DIR = path.join(__dirname, "public", "games");
+
+function loadGamesFromFolders() {
+  const games = [];
+  if (!fs.existsSync(GAMES_DIR)) return games;
+
+  const entries = fs.readdirSync(GAMES_DIR, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    const folder = entry.name;
+    const file = path.join(GAMES_DIR, folder, "questions.json");
+    if (!fs.existsSync(file)) continue;
+
+    try {
+      const game = JSON.parse(fs.readFileSync(file, "utf8"));
+
+      // Normalize theme paths relative to /public.
+      if (!game.theme) game.theme = {};
+      if (!game.theme.background && fs.existsSync(path.join(GAMES_DIR, folder, "background.jpg"))) {
+        game.theme.background = `games/${folder}/background.jpg`;
+      }
+
+      game.folder = folder;
+      game.questions = Array.isArray(game.questions) ? game.questions : [];
+      games.push(game);
+    } catch (err) {
+      console.error(`Could not load game folder "${folder}":`, err.message);
+    }
+  }
+
+  return games;
+}
+
+function getGames() {
+  return loadGamesFromFolders();
+}
+
+
+app.use(express.static(path.join(__dirname, "public")));
+app.get("/", (_, res) => res.sendFile(path.join(__dirname, "public", "HUB AREA.html")));
+
+const rooms = new Map();
+
+function code() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  do {
+    out = Array.from({length: 6}, () => chars[Math.floor(Math.random()*chars.length)]).join("");
+  } while (rooms.has(out));
+  return out;
+}
+
+function nameOf(v) {
+  return String(v || "").replace(/\s+/g, " ").trim().slice(0,20);
+}
+
+function tokenOf(v) {
+  return String(v || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0,80);
+}
+
+function roomGames(room) {
+  const games = getGames();
+  return room.gameChoices
+    .map(id => games.find(g => g.id === id))
+    .filter(Boolean)
+    .map(g => ({id:g.id,name:g.name,theme:g.theme || null}));
+}
+
+function publicState(room, viewerToken = null) {
+  return {
+    code: room.code,
+    phase: room.phase,
+    members: room.members.map(m => ({
+      id:m.publicId, name:m.name, role:m.role, ready:m.ready, score:m.score || 0,
+      connected:m.connected
+    })),
+    gameChoices: roomGames(room),
+    selectedGame: room.selectedGame,
+    selectedTheme: room.selectedGame
+      ? (getGames().find(g => g.id === room.selectedGame)?.theme || null)
+      : null,
+    questionIndex: room.questionIndex,
+    selectedGameInfo: room.selectedGame ? (() => {
+      const game = getGames().find(g => g.id === room.selectedGame);
+      return game ? { id: game.id, name: game.name, theme: game.theme || null } : null;
+    })() : null,
+    currentQuestion: room.currentQuestion ? (() => {
+      const game = getGames().find(g => g.id === room.selectedGame);
+      return {
+        id: room.currentQuestion.id,
+        type: room.currentQuestion.type,
+        points: room.currentQuestion.points ?? game?.defaults?.points ?? 100,
+        timer: room.currentQuestion.timer ?? game?.defaults?.timer ?? 60,
+        question: room.currentQuestion.question,
+        media: room.currentQuestion.media || [],
+        choices: room.currentQuestion.type === "multiple-choice"
+          ? (room.currentQuestion.choices || {})
+          : null
+      };
+    })() : null,
+    timerEndsAt: room.timerEndsAt,
+    submittedIds: [...room.submitted.keys()].map(token => member(room, token)?.publicId).filter(Boolean),
+    revealedAnswers: room.revealedAnswers || null,
+    selfId: viewerToken ? member(room, viewerToken)?.publicId || null : null
+  };
+}
+
+function emitRoom(room) {
+  for (const m of room.members) {
+    if (!m.socketId || !m.connected) continue;
+    io.to(m.socketId).emit("roomState", publicState(room, m.token));
+  }
+}
+
+function member(room, token) {
+  return room.members.find(m => m.token === token);
+}
+
+function shuffle(a) {
+  const b = [...a];
+  for (let i=b.length-1;i>0;i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [b[i],b[j]]=[b[j],b[i]];
+  }
+  return b;
+}
+
+function norm(s) {
+  return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^\p{L}\p{N}\s-]/gu," ").replace(/\s+/g," ").trim();
+}
+
+function listScore(answer, accepted, maxPoints) {
+  const values = String(answer||"").split(",").map(x=>norm(x)).filter(Boolean);
+  const acceptedNorm = accepted.map(norm);
+  const unique = new Set();
+  for (const v of values) {
+    const i = acceptedNorm.indexOf(v);
+    if (i >= 0) unique.add(i);
+  }
+  const per = accepted.length ? Math.floor(maxPoints / accepted.length) : 0;
+  return {correct: unique.size, points: unique.size * per};
+}
+
+function matches(answer, accepted) {
+  const n = norm(answer);
+  return (Array.isArray(accepted)?accepted:[accepted]).some(x=>norm(x)===n);
+}
+
+function chooseQuestion(room) {
+  const game = getGames().find(g => g.id === room.selectedGame);
+  if (!game) return null;
+  const available = game.questions.filter(q => !room.used.has(q.id));
+  if (!available.length) return null;
+  const q = available[Math.floor(Math.random()*available.length)];
+  room.used.add(q.id);
+  return q;
+}
+
+function startQuestion(room) {
+  const q = chooseQuestion(room);
+  if (!q) return false;
+  room.currentQuestion=q;
+  room.questionIndex++;
+  room.phase="question";
+  room.submitted=new Map();
+  room.revealStarted=false;
+  room.revealedAnswers=null;
+  room.timerEndsAt=Date.now()+effectiveTimer(room)*1000;
+  emitRoom(room);
+  return true;
+}
+
+
+function effectivePoints(room) {
+  const game = getGames().find(g => g.id === room.selectedGame);
+  return room.currentQuestion?.points ?? game?.defaults?.points ?? 100;
+}
+
+function effectiveTimer(room) {
+  const game = getGames().find(g => g.id === room.selectedGame);
+  return room.currentQuestion?.timer ?? game?.defaults?.timer ?? 60;
+}
+
+function reveal(room) {
+  if (!room || room.revealStarted) return;
+  room.revealStarted=true;
+  room.phase="reveal";
+  room.timerEndsAt=null;
+
+  const answers=[];
+  for (const m of room.members) {
+    if (m.role !== "player") continue;
+    const s=room.submitted.get(m.token);
+    let earned=0;
+    if (s) {
+      if (room.currentQuestion.type==="multiple-choice") {
+        earned = (room.currentQuestion.answers || []).includes(s.answer)
+          ? effectivePoints(room)
+          : 0;
+      } else if (room.currentQuestion.type==="identification") {
+        earned = matches(s.answer, room.currentQuestion.answers || [])
+          ? effectivePoints(room)
+          : 0;
+      } else {
+        earned = listScore(s.answer, room.currentQuestion.answers || [], effectivePoints(room)).points;
+      }
+      m.score=(m.score||0)+earned;
+    }
+    answers.push({
+      id:m.publicId, name:m.name, answer:s?.answer||"", submitted:!!s, points:earned
+    });
+  }
+  room.revealedAnswers = answers;
+  io.to(room.code).emit("reveal", {answers});
+  emitRoom(room);
+}
+
+function allPlayersSubmitted(room) {
+  const ps=room.members.filter(m=>m.role==="player");
+  return ps.length>0 && ps.every(p=>room.submitted.has(p.token));
+}
+
+function choices(room) {
+  const availableGames = getGames().filter(g =>
+    Array.isArray(g.questions) && g.questions.length > 0
+  );
+  room.gameChoices = shuffle(availableGames).slice(0, 3).map(g => g.id);
+}
+
+io.on("connection", socket => {
+  socket.on("createRoom", ({name, token}) => {
+    name=nameOf(name); token=tokenOf(token);
+    if (!name || !token) return socket.emit("errorMessage","Name is required.");
+
+    const room = {
+      code:code(), hostToken:token, phase:"waiting",
+      members:[{token,publicId:crypto.randomUUID(),name,role:"gm",ready:true,score:0,connected:true,socketId:socket.id}],
+      gameChoices:[], selectedGame:null, questionIndex:0, used:new Set(),
+      currentQuestion:null, timerEndsAt:null, submitted:new Map(), revealStarted:false, revealedAnswers:null
+    };
+    choices(room);
+    rooms.set(room.code,room);
+    socket.join(room.code);
+    socket.data.roomCode=room.code; socket.data.token=token;
+    socket.emit("createdRoom", {code:room.code});
+    emitRoom(room);
+  });
+
+  socket.on("reconnectRoom", ({code:roomCode, token, name}) => {
+    roomCode=String(roomCode||"").toUpperCase().trim(); token=tokenOf(token); name=nameOf(name);
+    const room=rooms.get(roomCode);
+    if (!room || !member(room,token)) return socket.emit("errorMessage","Room session not found.");
+    const m=member(room,token);
+    m.connected=true; m.socketId=socket.id;
+    if (name) m.name=name;
+    socket.join(roomCode);
+    socket.data.roomCode=roomCode; socket.data.token=token;
+    socket.emit("reconnected",{role:m.role,isGM:room.hostToken===m.token});
+  if (room.hostToken===m.token) socket.emit("roleChanged", {role:"gm"});
+    emitRoom(room);
+  });
+
+  socket.on("joinRoom", ({code:roomCode,name,role,token}) => {
+    roomCode=String(roomCode||"").toUpperCase().trim(); name=nameOf(name); token=tokenOf(token);
+    const room=rooms.get(roomCode);
+    if (!room) return socket.emit("errorMessage","Room not found.");
+    if (room.phase!=="waiting") return socket.emit("errorMessage","The game has already started.");
+    if (!name || !token) return socket.emit("errorMessage","Name is required.");
+    if (room.members.some(m=>m.name.toLowerCase()===name.toLowerCase())) return socket.emit("errorMessage","That name is already in the room.");
+
+    const role2=role==="spectator"?"spectator":"player";
+    if (role2==="player" && room.members.filter(m=>m.role==="player").length>=MAX_PLAYERS)
+      return socket.emit("errorMessage","Player seats are full.");
+
+    room.members.push({token,publicId:crypto.randomUUID(),name,role:role2,ready:role2==="spectator",score:0,connected:true,socketId:socket.id});
+    socket.join(roomCode); socket.data.roomCode=roomCode; socket.data.token=token;
+    emitRoom(room);
+  });
+
+  socket.on("setReady",ready => {
+    const room=rooms.get(socket.data.roomCode); if(!room) return;
+    const m=member(room,socket.data.token); if(!m || m.role!=="player") return;
+    m.ready=!!ready; emitRoom(room);
+  });
+
+  socket.on("switchRole",role => {
+    const room=rooms.get(socket.data.roomCode); if(!room || room.phase!=="waiting") return;
+    const m=member(room,socket.data.token); if(!m || m.role==="gm") return;
+    if (role==="player" && room.members.filter(x=>x.role==="player").length>=MAX_PLAYERS)
+      return socket.emit("errorMessage","Player seats are full.");
+    if (role!=="player" && role!=="spectator") return;
+    m.role=role; m.ready=role==="spectator"; emitRoom(room);
+  });
+
+  socket.on("gmSetRole",({id,role})=>{
+    const room=rooms.get(socket.data.roomCode); if(!room || room.hostToken!==socket.data.token || room.phase!=="waiting") return;
+    const m=room.members.find(x=>x.publicId===id); if(!m || m.role==="gm") return;
+    if(role==="player" && room.members.filter(x=>x.role==="player").length>=MAX_PLAYERS) return socket.emit("errorMessage","Player seats are full.");
+    if(!["player","spectator"].includes(role)) return;
+    m.role=role; m.ready=role==="spectator"; emitRoom(room);
+  });
+
+  socket.on("startGame",()=>{
+    const room=rooms.get(socket.data.roomCode); if(!room || room.hostToken!==socket.data.token || room.phase!=="waiting") return;
+    const ps=room.members.filter(m=>m.role==="player");
+    if(!ps.length || !ps.every(p=>p.ready)) return socket.emit("errorMessage","Every player must be READY.");
+    room.phase="choices"; choices(room); emitRoom(room);
+  });
+
+  socket.on("chooseGame",gameId=>{
+    const room=rooms.get(socket.data.roomCode); if(!room || room.hostToken!==socket.data.token || room.phase!=="choices") return;
+    if(!room.gameChoices.includes(gameId)) return;
+    room.selectedGame=gameId;
+    if(!startQuestion(room)) socket.emit("errorMessage","No unused questions remain in that game.");
+  });
+
+  socket.on("submitAnswer",answer=>{
+    const room=rooms.get(socket.data.roomCode); if(!room || room.phase!=="question" || room.revealStarted) return;
+    const m=member(room,socket.data.token); if(!m || m.role!=="player" || room.submitted.has(m.token)) return;
+    room.submitted.set(m.token,{answer:String(answer||"").slice(0,1200)});
+    socket.emit("answerAccepted");
+    emitRoom(room);
+    if(allPlayersSubmitted(room)) reveal(room);
+  });
+
+  socket.on("revealNow",()=>{
+    const room=rooms.get(socket.data.roomCode); if(!room || room.hostToken!==socket.data.token) return;
+    reveal(room);
+  });
+
+  socket.on("nextQuestion",()=>{
+    const room=rooms.get(socket.data.roomCode); if(!room || room.hostToken!==socket.data.token) return;
+    room.phase="choices"; room.selectedGame=null; room.currentQuestion=null; room.submitted=new Map(); room.revealStarted=false; room.revealedAnswers=null; choices(room); emitRoom(room);
+  });
+
+  socket.on("addFreebie",({token,points})=>{
+    const room=rooms.get(socket.data.roomCode); if(!room || room.hostToken!==socket.data.token) return;
+    const m=member(room,token); const amount=Number(points);
+    if(!m || m.role!=="player" || !Number.isFinite(amount)) return;
+    m.score=(m.score||0)+amount; emitRoom(room);
+  });
+
+  socket.on("disconnect",()=>{
+    const room=rooms.get(socket.data.roomCode); if(!room) return;
+    const m=member(room,socket.data.token);
+    if(!m) return;
+    m.connected=false; m.socketId=null;
+    emitRoom(room);
+    setTimeout(()=>{
+      const r=rooms.get(room.code); if(!r) return;
+      const x=member(r,m.token);
+      if(x && !x.connected){
+        r.members=r.members.filter(a=>a.token!==m.token);
+        if(r.hostToken===m.token){
+          const next=r.members.find(a=>a.role==="player")||r.members[0];
+          if(next){
+            next.role="gm"; next.ready=true; r.hostToken=next.token;
+            if(next.socketId) io.to(next.socketId).emit("roleChanged", {role:"gm"});
+          }
+          else { rooms.delete(r.code); return; }
+        }
+        emitRoom(r);
+      }
+    },300000);
+  });
+});
+
+setInterval(()=>{
+  for(const room of rooms.values()){
+    if(room.phase==="question" && room.timerEndsAt && Date.now()>=room.timerEndsAt) reveal(room);
+  }
+},250);
+
+server.listen(PORT, "0.0.0.0", () => console.log(`Jeopardy running on port ${PORT}`));

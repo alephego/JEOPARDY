@@ -1,0 +1,50 @@
+{
+  "id": "game-id",
+  "name": "Game Name",
+  "theme": {
+    "background": "background.jpg",
+    "accent": "#735cff",
+    "accent2": "#16d8ff",
+    "animation": "scan"
+  },
+  "questions": [
+    {
+      "id": "q001",
+      "type": "multiple-choice",
+      "timer": 30,
+      "damage": 1,
+      "question": "YOUR QUESTION HERE",
+      "media": [],
+      "choices": {
+        "A": "ANSWER A",
+        "B": "ANSWER B",
+        "C": "ANSWER C",
+        "D": "ANSWER D"
+      },
+      "answers": ["A"]
+    },
+    {
+      "id": "q002",
+      "type": "identification",
+      "timer": 60,
+      "damage": 1,
+      "question": "IDENTIFY THIS",
+      "media": [
+        {
+          "type": "image",
+          "src": "images/example.jpg"
+        }
+      ],
+      "answers": ["CORRECT ANSWER", "ALTERNATE ANSWER"]
+    },
+    {
+      "id": "q003",
+      "type": "list",
+      "timer": 90,
+      "damage": 2,
+      "question": "NAME AS MANY AS YOU CAN",
+      "media": [],
+      "answers": ["ANSWER 1", "ANSWER 2", "ANSWER 3"]
+    }
+  ]
+}

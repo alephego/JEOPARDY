@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JEOPARDY - Waiting Area</title>
+  <link rel="stylesheet" href="CSS/app.css">
+</head>
+<body>
+  <main class="screen">
+    <section class="panel waiting-panel">
+
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">PARTY ROOM</div>
+          <h1>WAITING AREA</h1>
+        </div>
+
+        <div class="room-code">
+          <span>ROOM CODE</span>
+          <strong id="roomCode">------</strong>
+        </div>
+      </div>
+
+      <div class="team-strip">
+        <div>
+          <span>MODE</span>
+          <strong>TEAM GAUNTLET</strong>
+        </div>
+
+        <div>
+          <span>STARTING HP</span>
+          <strong id="hpSummary">10 HP</strong>
+        </div>
+
+        <div>
+          <span>PLAYER LIMIT</span>
+          <strong>10</strong>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <i class="dot"></i>
+        <span id="status">Waiting for players...</span>
+      </div>
+
+      <div class="stats">
+        <div>
+          <span>PLAYERS</span>
+          <strong id="pc">0/10</strong>
+        </div>
+
+        <div>
+          <span>SPECTATORS</span>
+          <strong id="sc">0</strong>
+        </div>
+      </div>
+
+      <div class="section-label">ROOM MEMBERS</div>
+      <div id="members" class="member-grid"></div>
+
+      <section id="gmSettings" class="gm-settings hidden">
+        <div class="section-label">GM CONTROLS</div>
+
+        <div class="gm-setting-row">
+          <div>
+            <strong>Starting HP per player</strong>
+            <small>Only the GM can change this before starting.</small>
+          </div>
+
+          <div class="hp-control">
+            <input id="startingHp" type="number" min="1" max="100" value="10">
+            <button id="applyHp" class="btn secondary">APPLY</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="ready" class="btn secondary">READY</button>
+        <button id="start" class="btn primary hidden">START GAUNTLET</button>
+      </div>
+
+      <p id="msg" class="message"></p>
+
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="JS/waiting.js"></script>
+</body>
+</html>

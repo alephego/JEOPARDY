@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JEOPARDY - Choose Game</title>
+  <link rel="stylesheet" href="CSS/app.css">
+</head>
+<body>
+  <main class="screen center">
+    <section class="panel choice-panel">
+      <div class="eyebrow">GAUNTLET — NEXT ROUND</div>
+      <h1>CHOOSE A GAME</h1>
+      <p class="subtitle">Players vote. The choice with the most votes wins.</p>
+
+      <div class="choice-timer-wrap">
+        <div class="choice-timer" id="choiceTimer">10</div>
+        <span>SECONDS</span>
+      </div>
+
+      <div id="choices" class="game-choice-grid"></div>
+
+      <div id="voteStatus" class="vote-status"></div>
+      <p id="msg" class="message"></p>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="JS/choices.js"></script>
+</body>
+</html>

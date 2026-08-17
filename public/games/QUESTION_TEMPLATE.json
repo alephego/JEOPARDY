@@ -1,0 +1,62 @@
+{
+  "id": "game-id",
+  "name": "Game Name",
+  "theme": {
+    "background": "background.jpg",
+    "accent": "#735cff",
+    "accent2": "#16d8ff",
+    "animation": "scan"
+  },
+
+  "_comment_rules": "Everything under 'rules' is OPTIONAL. Leave it out entirely and this game just uses the server's global defaults. Include only the fields you want to override.",
+  "rules": {
+    "hardQuestionDamage": 2,
+    "reviveRoundsRequired": 2,
+    "reviveHpPercent": 0.5,
+    "teamHealAmount": 1,
+    "pointsPerDamage": 10
+  },
+
+  "questions": [
+    {
+      "id": "q001",
+      "type": "multiple-choice",
+      "timer": 30,
+      "damage": 1,
+      "question": "YOUR QUESTION HERE",
+      "media": [],
+      "choices": {
+        "A": "ANSWER A",
+        "B": "ANSWER B",
+        "C": "ANSWER C",
+        "D": "ANSWER D"
+      },
+      "answers": ["A"]
+    },
+    {
+      "id": "q002",
+      "type": "identification",
+      "timer": 60,
+      "damage": 1,
+      "question": "IDENTIFY THIS",
+      "media": [
+        {
+          "type": "image",
+          "src": "images/example.jpg"
+        }
+      ],
+      "answers": ["CORRECT ANSWER", "ALTERNATE ANSWER"]
+    },
+    {
+      "id": "q003",
+      "type": "list",
+      "timer": 90,
+      "damage": 2,
+      "_comment_points": "Optional. If omitted, points = damage * rules.pointsPerDamage (here: 2 * 10 = 20). Set this to override that math for a specific question.",
+      "points": 25,
+      "question": "NAME AS MANY AS YOU CAN",
+      "media": [],
+      "answers": ["ANSWER 1", "ANSWER 2", "ANSWER 3"]
+    }
+  ]
+}

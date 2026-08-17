@@ -1,0 +1,1 @@
+Put videos here and reference them as media/videos/filename.ext
