@@ -189,6 +189,12 @@ body {
 .mini-player span { color: var(--muted); font-weight: 900; }
 .mini-player.dead { opacity: .45; border-color: rgba(255,93,120,.35); }
 
+.mini-player-points {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--gold) !important;
+}
+
 .question-main {
   width: min(920px, 92%);
   margin: auto;

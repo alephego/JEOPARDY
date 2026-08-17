@@ -11,6 +11,18 @@ const reason =
     "reason"
   );
 
+const eyebrow =
+  document.getElementById("eyebrow");
+
+const title =
+  document.getElementById("title");
+
+const panel =
+  document.getElementById("panel");
+
+const loserLabel =
+  document.getElementById("loserLabel");
+
 const playersFinal =
   document.getElementById(
     "playersFinal"
@@ -48,6 +60,33 @@ socket.on("roomState", (state) => {
 
   reason.textContent =
     state.gameOver.reason;
+
+  const isVictory = Boolean(
+    state.gameOver.victory
+  );
+
+  panel.classList.toggle(
+    "victory",
+    isVictory
+  );
+
+  panel.classList.toggle(
+    "defeat",
+    !isVictory
+  );
+
+  eyebrow.textContent = isVictory
+    ? "GAUNTLET CLEARED"
+    : "THE GAUNTLET CLAIMS YOU";
+
+  title.textContent = isVictory
+    ? "VICTORY"
+    : "GAME OVER";
+
+  loserLabel.classList.toggle(
+    "hidden",
+    state.gameOver.losers.length === 0
+  );
 
   playersFinal.innerHTML = "";
 

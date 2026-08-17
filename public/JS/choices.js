@@ -12,7 +12,9 @@ const elements = {
   voteStatus:
     document.getElementById("voteStatus"),
   message:
-    document.getElementById("msg")
+    document.getElementById("msg"),
+  teamPoints:
+    document.getElementById("teamPoints")
 };
 
 let selfId =
@@ -180,6 +182,46 @@ function renderChoices(state) {
     canVote
       ? "Vote for your choice. You can change it until the countdown ends."
       : "You are watching the team vote.";
+
+  renderTeamPoints(state);
+}
+
+function renderTeamPoints(state) {
+  if (!elements.teamPoints) return;
+
+  elements.teamPoints.innerHTML = "";
+
+  const players = [...state.members]
+    .filter(
+      (player) => player.role === "player"
+    )
+    .sort(
+      (a, b) =>
+        (b.points || 0) - (a.points || 0)
+    );
+
+  for (const player of players) {
+    const row =
+      document.createElement("div");
+
+    row.className = "team-points-row";
+
+    row.innerHTML = `
+      <span>${escapeHtml(player.name)}</span>
+      <strong>${player.points || 0} PTS</strong>
+    `;
+
+    elements.teamPoints.appendChild(row);
+  }
+}
+
+function escapeHtml(value) {
+  const element =
+    document.createElement("div");
+
+  element.textContent = value;
+
+  return element.innerHTML;
 }
 
 function startCountdown(endTime) {

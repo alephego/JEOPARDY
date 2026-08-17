@@ -16,7 +16,7 @@
   },
   "questions": [
     {
-      "id": "astlibra-mc-001",
+      "id": "cult-of-the-lamb__astlibra-mc-001",
       "type": "multiple-choice",
       "timer": 30,
       "damage": 1,
@@ -33,7 +33,7 @@
       ]
     },
     {
-      "id": "astlibra-id-001",
+      "id": "cult-of-the-lamb__astlibra-id-001",
       "type": "identification",
       "timer": 60,
       "damage": 1,
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "id": "astlibra-list-001",
+      "id": "cult-of-the-lamb__astlibra-list-001",
       "type": "list",
       "timer": 90,
       "damage": 2,

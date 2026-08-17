@@ -24,7 +24,7 @@ const TEAM_HEAL_AMOUNT = 1;         // flat team-wide heal when a hard question 
 const POINTS_PER_DAMAGE = 10;       // points earned for a correct answer = question damage * this (unless the question sets its own "points")
 
 // --- Shop ---
-const SHOP_INTERVAL = 10;   // a shop phase triggers every N completed rounds
+const SHOP_INTERVAL = 5;    // a shop phase triggers every N completed rounds
 const SHOP_SECONDS = 45;    // how long the shop phase stays open
 
 const SHOP_ITEMS = [
@@ -592,8 +592,15 @@ function finishGame(room, reason) {
     (player) => player.dead
   );
 
+  // Only a wipe counts as a real defeat. Clearing every game's
+  // questions with the team still standing is a win.
+  const isDefeat =
+    reason === "ALL PLAYERS ARE DOWN" ||
+    reason === "NO PLAYERS REMAIN";
+
   room.gameOver = {
     reason,
+    victory: !isDefeat,
     losers: downPlayers.map((player) => ({
       id: player.publicId,
       name: player.name,

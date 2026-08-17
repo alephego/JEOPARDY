@@ -827,6 +827,9 @@ function renderPlayerStatus(state) {
               : `${player.hp} HP`
           }
         </span>
+        <span class="mini-player-points">
+          ${player.points || 0} PTS
+        </span>
       `;
 
       elements.playerStatusBar.appendChild(

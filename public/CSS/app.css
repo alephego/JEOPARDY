@@ -337,6 +337,29 @@ input:focus,
 .loser-card strong { display: block; font-size: 24px; }
 .loser-card span { color: var(--red); font-size: 12px; font-weight: 900; letter-spacing: .1em; }
 
+.game-over-panel.victory #title {
+  color: var(--green);
+  text-shadow: 0 0 34px rgba(49,225,147,.55);
+}
+
+.game-over-panel.victory #eyebrow {
+  color: var(--green);
+}
+
+.game-over-panel.victory {
+  border-color: rgba(49,225,147,.35);
+  box-shadow: 0 25px 80px rgba(0,0,0,.46), 0 0 50px rgba(49,225,147,.08);
+}
+
+.game-over-panel.defeat #title {
+  color: var(--red);
+  text-shadow: 0 0 34px rgba(255,93,120,.5);
+}
+
+.game-over-panel.defeat #eyebrow {
+  color: var(--red);
+}
+
 @media (max-width: 700px) {
   .panel { padding: 24px; }
   .button-row, .actions { flex-direction: column; }
@@ -457,6 +480,26 @@ input:focus,
 
 .final-player-card .final-points{
   color:var(--gold);
+}
+
+.team-points-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  text-align: left;
+}
+
+.team-points-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .03);
+}
+
+.team-points-row strong {
+  color: var(--gold);
 }
 
 @media(max-width:650px){
