@@ -6,11 +6,14 @@
   <title>JEOPARDY - Shop</title>
   <link rel="stylesheet" href="CSS/app.css">
   <link rel="stylesheet" href="CSS/shop.css">
+  <link rel="stylesheet" href="CSS/reactions.css">
 </head>
 <body>
+  <div id="pausedBanner" class="paused-banner hidden">⏸ PAUSED BY GM</div>
+
   <main class="screen center">
     <section class="panel shop-panel">
-      <div class="eyebrow">EVERY 10 ROUNDS</div>
+      <div class="eyebrow">EVERY 5 ROUNDS</div>
       <h1>THE SHOP</h1>
       <p class="subtitle">Spend your points before the gauntlet continues.</p>
 
@@ -18,6 +21,8 @@
         <div class="shop-timer" id="shopTimer">45</div>
         <span>SECONDS LEFT</span>
       </div>
+
+      <button id="gmPauseButton" class="btn secondary hidden">⏸ PAUSE</button>
 
       <div class="shop-points-strip">
         <span>YOUR POINTS</span>
@@ -32,15 +37,37 @@
         <button id="cancelRevive" class="btn secondary">CANCEL</button>
       </div>
 
+      <div class="shop-ready-wrap">
+        <div id="shopReadyStatus" class="shop-ready-status"></div>
+        <button id="readyButton" class="btn primary">READY</button>
+      </div>
+
       <p id="msg" class="message"></p>
 
       <div class="section-label">TEAM POINTS</div>
       <div id="teamPoints" class="team-points-grid"></div>
+
+      <div id="gmAdminPanel" class="gm-admin-panel hidden">
+        <div class="section-label">GM: GIVE TO PLAYER</div>
+
+        <select id="gmTargetSelect" class="theme-select"></select>
+
+        <div class="gm-admin-row">
+          <input id="gmAmount" type="number" value="10">
+          <button id="gmGivePoints" class="btn secondary">GIVE POINTS</button>
+          <button id="gmGiveHp" class="btn secondary">GIVE HP</button>
+        </div>
+
+        <p class="gm-admin-hint">
+          Use a negative number to take points or HP away instead.
+        </p>
+      </div>
 
     </section>
   </main>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="JS/shop.js"></script>
+  <script src="JS/reactions.js"></script>
 </body>
 </html>

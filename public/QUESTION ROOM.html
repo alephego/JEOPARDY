@@ -5,15 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JEOPARDY - Gauntlet Question</title>
   <link rel="stylesheet" href="CSS/question.css">
+  <link rel="stylesheet" href="CSS/reactions.css">
 </head>
 <body>
   <div id="themeBackground" class="theme-background"></div>
   <div id="ambient" class="ambient"></div>
   <div id="shotStage" class="shot-stage"></div>
 
+  <div id="pausedBanner" class="paused-banner hidden">⏸ PAUSED BY GM</div>
+
   <main class="question-screen">
     <header class="question-hud">
-      <div class="brand">JEOPARDY <span class="build-tag">BUILD 7</span></div>
+      <div class="brand">JEOPARDY <span class="build-tag">BUILD 11</span></div>
       <div class="hud-block"><span>GAME</span><strong id="game">---</strong></div>
       <div class="hud-block"><span>QUESTION</span><strong id="qn">1</strong></div>
       <div class="hud-block"><span>DAMAGE</span><strong id="damage">1 HP</strong></div>
@@ -92,10 +95,30 @@
       <button id="next" class="gm-btn gm-btn-next">
         <span class="gm-btn-icon">➡</span>NEXT ROUND / VOTE
       </button>
+      <button id="pauseToggle" class="gm-btn gm-btn-pause">
+        <span class="gm-btn-icon">⏸</span>PAUSE
+      </button>
+      <button id="autoAdvanceToggle" class="gm-btn gm-btn-auto">
+        <span class="gm-btn-icon">⏩</span>AUTO-ADVANCE: OFF
+      </button>
+      <button id="gmAdminToggle" class="gm-btn gm-btn-admin">
+        <span class="gm-btn-icon">⚙</span>GIVE POINTS / HP
+      </button>
+    </div>
+
+    <div id="gmAdminPanel" class="gm-console-admin hidden">
+      <select id="gmTargetSelect" class="gm-admin-select"></select>
+
+      <div class="gm-admin-row">
+        <input id="gmAmount" type="number" value="10">
+        <button id="gmGivePoints" class="gm-btn">POINTS</button>
+        <button id="gmGiveHp" class="gm-btn">HP</button>
+      </div>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="JS/question.js"></script>
+  <script src="JS/reactions.js"></script>
 </body>
 </html>

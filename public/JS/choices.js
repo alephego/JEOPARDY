@@ -14,7 +14,11 @@ const elements = {
   message:
     document.getElementById("msg"),
   teamPoints:
-    document.getElementById("teamPoints")
+    document.getElementById("teamPoints"),
+  pausedBanner:
+    document.getElementById("pausedBanner"),
+  gmPauseButton:
+    document.getElementById("gmPauseButton")
 };
 
 let selfId =
@@ -66,6 +70,13 @@ socket.on("roomState", (state) => {
     startCountdown(
       state.choiceEndsAt
     );
+    updatePausedUi(state);
+
+    if (state.paused) {
+      clearInterval(timerHandle);
+      elements.timer.textContent = "⏸";
+    }
+
     return;
   }
 
@@ -223,6 +234,35 @@ function escapeHtml(value) {
 
   return element.innerHTML;
 }
+
+function updatePausedUi(state) {
+  elements.pausedBanner?.classList.toggle(
+    "hidden",
+    !state.paused
+  );
+
+  const isGm =
+    state.selfRole === "gm" ||
+    sessionStorage.getItem("jeopardyRole") ===
+      "gm";
+
+  if (!elements.gmPauseButton) return;
+
+  elements.gmPauseButton.classList.toggle(
+    "hidden",
+    !isGm
+  );
+
+  elements.gmPauseButton.textContent =
+    state.paused ? "▶ RESUME" : "⏸ PAUSE";
+}
+
+elements.gmPauseButton?.addEventListener(
+  "click",
+  () => {
+    socket.emit("togglePause");
+  }
+);
 
 function startCountdown(endTime) {
   if (!endTime) {

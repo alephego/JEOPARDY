@@ -148,9 +148,23 @@ socket.on("roomState", (state) => {
   // A submission is only a player-state update.
   updateQuestionState(state);
 
+  document
+    .getElementById("pausedBanner")
+    ?.classList.toggle(
+      "hidden",
+      !state.paused
+    );
+
+  updatePauseAndAutoAdvanceButtons(state);
+
   if (state.phase === "question") {
     currentPhase = "question";
     startTimer(state.timerEndsAt);
+
+    if (state.paused) {
+      clearInterval(timerHandle);
+      elements.timer.textContent = "⏸";
+    }
   } else {
     currentPhase = "reveal";
     clearInterval(timerHandle);
@@ -501,6 +515,76 @@ function updateGmConsole(state) {
         total > 0 &&
         submittedCount === total
     );
+  }
+
+  updateGmAdminSelect(state);
+}
+
+function updateGmAdminSelect(state) {
+  const select = document.getElementById(
+    "gmTargetSelect"
+  );
+
+  if (!select) return;
+
+  const players = state.members.filter(
+    (player) => player.role === "player"
+  );
+
+  const previousSelection = select.value;
+
+  select.innerHTML = players
+    .map(
+      (player) =>
+        `<option value="${player.id}">
+          ${escapeHtml(player.name)}
+          ${
+            player.dead
+              ? "(DOWN)"
+              : `(${player.hp} HP, ${player.points || 0} PTS)`
+          }
+        </option>`
+    )
+    .join("");
+
+  if (
+    players.some(
+      (player) => player.id === previousSelection
+    )
+  ) {
+    select.value = previousSelection;
+  }
+}
+
+function updatePauseAndAutoAdvanceButtons(state) {
+  const pauseBtn = document.getElementById(
+    "pauseToggle"
+  );
+
+  const autoBtn = document.getElementById(
+    "autoAdvanceToggle"
+  );
+
+  if (pauseBtn) {
+    pauseBtn.classList.toggle(
+      "active",
+      Boolean(state.paused)
+    );
+
+    pauseBtn.innerHTML = state.paused
+      ? '<span class="gm-btn-icon">▶</span>RESUME'
+      : '<span class="gm-btn-icon">⏸</span>PAUSE';
+  }
+
+  if (autoBtn) {
+    autoBtn.classList.toggle(
+      "active",
+      Boolean(state.autoAdvance)
+    );
+
+    autoBtn.innerHTML = state.autoAdvance
+      ? '<span class="gm-btn-icon">⏩</span>AUTO-ADVANCE: ON'
+      : '<span class="gm-btn-icon">⏩</span>AUTO-ADVANCE: OFF';
   }
 }
 
@@ -1398,3 +1482,75 @@ document
         "nextRound"
       )
   );
+
+document
+  .getElementById("gmAdminToggle")
+  .addEventListener("click", () => {
+    const panel = document.getElementById(
+      "gmAdminPanel"
+    );
+
+    const toggle = document.getElementById(
+      "gmAdminToggle"
+    );
+
+    panel.classList.toggle("hidden");
+    toggle.classList.toggle(
+      "active",
+      !panel.classList.contains("hidden")
+    );
+  });
+
+document
+  .getElementById("gmGivePoints")
+  .addEventListener("click", () => {
+    const targetId = document.getElementById(
+      "gmTargetSelect"
+    ).value;
+
+    const amount = Number(
+      document.getElementById("gmAmount")
+        .value
+    );
+
+    if (!targetId || !Number.isFinite(amount))
+      return;
+
+    socket.emit("gmGrantPoints", {
+      targetId,
+      amount
+    });
+  });
+
+document
+  .getElementById("gmGiveHp")
+  .addEventListener("click", () => {
+    const targetId = document.getElementById(
+      "gmTargetSelect"
+    ).value;
+
+    const amount = Number(
+      document.getElementById("gmAmount")
+        .value
+    );
+
+    if (!targetId || !Number.isFinite(amount))
+      return;
+
+    socket.emit("gmGrantHp", {
+      targetId,
+      amount
+    });
+  });
+
+document
+  .getElementById("pauseToggle")
+  .addEventListener("click", () => {
+    socket.emit("togglePause");
+  });
+
+document
+  .getElementById("autoAdvanceToggle")
+  .addEventListener("click", () => {
+    socket.emit("toggleAutoAdvance");
+  });

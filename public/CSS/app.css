@@ -323,7 +323,13 @@ input:focus,
 
 .game-choice:hover:not(:disabled) { transform: translateY(-4px); border-color: var(--cyan); }
 .game-choice:hover:not(:disabled)::before { opacity: .28; transform: scale(1.09); }
-.game-choice.selected { border-color: var(--gold); box-shadow: 0 0 28px rgba(255,195,71,.14); }
+.game-choice.selected { border-color: var(--gold); box-shadow: 0 0 28px rgba(255,195,71,.14); animation: voteSelectPop .35s ease; }
+
+@keyframes voteSelectPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}
 .game-choice:disabled { opacity: .72; cursor: default; }
 .game-choice strong,
 .game-choice span { position: relative; z-index: 2; }
@@ -358,6 +364,28 @@ input:focus,
 
 .game-over-panel.defeat #eyebrow {
   color: var(--red);
+}
+
+.confetti-piece {
+  position: fixed;
+  top: -20px;
+  z-index: 90;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: confettiFall var(--fall-duration, 3s) cubic-bezier(.3,.6,.4,1) forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--drift, 0), 100vh, 0) rotate(var(--rotate, 360deg));
+    opacity: .85;
+  }
 }
 
 @media (max-width: 700px) {
@@ -500,6 +528,32 @@ input:focus,
 
 .team-points-row strong {
   color: var(--gold);
+}
+
+.paused-banner{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  padding: 12px;
+  text-align: center;
+  background: rgba(255,195,71,.16);
+  border-bottom: 2px solid var(--gold);
+  color: var(--gold);
+  font-weight: 1000;
+  letter-spacing: .12em;
+  font-size: 13px;
+  animation: pausedBannerPulse 1.4s ease-in-out infinite;
+}
+
+.paused-banner.hidden{
+  display: none !important;
+}
+
+@keyframes pausedBannerPulse{
+  0%, 100% { opacity: 1; }
+  50% { opacity: .7; }
 }
 
 @media(max-width:650px){

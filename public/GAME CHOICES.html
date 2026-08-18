@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JEOPARDY - Choose Game</title>
   <link rel="stylesheet" href="CSS/app.css">
+  <link rel="stylesheet" href="CSS/reactions.css">
 </head>
 <body>
+  <div id="pausedBanner" class="paused-banner hidden">⏸ PAUSED BY GM</div>
+
   <main class="screen center">
     <section class="panel choice-panel">
       <div class="eyebrow">GAUNTLET — NEXT ROUND</div>
@@ -17,6 +20,8 @@
         <div class="choice-timer" id="choiceTimer">10</div>
         <span>SECONDS</span>
       </div>
+
+      <button id="gmPauseButton" class="btn secondary hidden">⏸ PAUSE</button>
 
       <div id="choices" class="game-choice-grid"></div>
 
@@ -30,5 +35,6 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="JS/choices.js"></script>
+  <script src="JS/reactions.js"></script>
 </body>
 </html>

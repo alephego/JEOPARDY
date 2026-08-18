@@ -1,6 +1,8 @@
 
 const socket = io();
 
+let confettiFired = false;
+
 const token =
   sessionStorage.getItem(
     "jeopardyToken"
@@ -87,6 +89,11 @@ socket.on("roomState", (state) => {
     "hidden",
     state.gameOver.losers.length === 0
   );
+
+  if (isVictory && !confettiFired) {
+    confettiFired = true;
+    launchConfetti();
+  }
 
   playersFinal.innerHTML = "";
 
@@ -192,4 +199,50 @@ function escapeHtml(value) {
     value;
 
   return element.innerHTML;
+}
+
+function launchConfetti() {
+  const colors = [
+    "#735cff",
+    "#16d8ff",
+    "#ffc347",
+    "#31e193",
+    "#ff5d78"
+  ];
+
+  const count = 70;
+
+  for (let i = 0; i < count; i++) {
+    const piece =
+      document.createElement("div");
+
+    piece.className = "confetti-piece";
+
+    piece.style.left = `${Math.random() * 100}vw`;
+    piece.style.background =
+      colors[
+        Math.floor(Math.random() * colors.length)
+      ];
+    piece.style.animationDelay =
+      `${Math.random() * 0.6}s`;
+    piece.style.setProperty(
+      "--fall-duration",
+      `${2.4 + Math.random() * 1.6}s`
+    );
+    piece.style.setProperty(
+      "--drift",
+      `${(Math.random() - 0.5) * 160}px`
+    );
+    piece.style.setProperty(
+      "--rotate",
+      `${360 + Math.random() * 360}deg`
+    );
+
+    document.body.appendChild(piece);
+
+    setTimeout(
+      () => piece.remove(),
+      4500
+    );
+  }
 }

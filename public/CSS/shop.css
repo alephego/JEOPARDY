@@ -120,6 +120,16 @@
   background: rgba(255, 255, 255, .05);
 }
 
+.shop-item.purchase-flash {
+  animation: shopPurchaseFlash .7s ease;
+}
+
+@keyframes shopPurchaseFlash {
+  0% { transform: scale(1); box-shadow: none; }
+  30% { transform: scale(1.04); box-shadow: 0 0 30px rgba(49,225,147,.5); border-color: var(--green); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
 .revive-target-wrap {
   margin: 22px auto;
   padding: 18px;
@@ -161,8 +171,68 @@
   color: var(--gold);
 }
 
+.shop-ready-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 22px auto 6px;
+}
+
+.shop-ready-wrap .btn {
+  width: min(280px, 100%);
+}
+
+.shop-ready-status {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.gm-admin-panel {
+  margin-top: 26px;
+  padding: 18px;
+  border: 1px solid rgba(255, 195, 71, .28);
+  border-radius: 16px;
+  background: rgba(255, 195, 71, .04);
+  text-align: left;
+}
+
+.gm-admin-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.gm-admin-row input {
+  width: 100px;
+  flex: 0 0 auto;
+}
+
+.gm-admin-row .btn {
+  flex: 1;
+  padding: 12px 10px;
+  font-size: 12px;
+}
+
+.gm-admin-hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 @media (max-width: 650px) {
   .shop-item-grid {
     grid-template-columns: 1fr;
+  }
+
+  .gm-admin-row {
+    flex-direction: column;
+  }
+
+  .gm-admin-row input {
+    width: 100%;
   }
 }

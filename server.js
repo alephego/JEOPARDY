@@ -26,42 +26,49 @@ const POINTS_PER_DAMAGE = 10;       // points earned for a correct answer = ques
 // --- Shop ---
 const SHOP_INTERVAL = 5;    // a shop phase triggers every N completed rounds
 const SHOP_SECONDS = 45;    // how long the shop phase stays open
+const AUTO_ADVANCE_DELAY_MS = 7000; // time to let a reveal play out before auto-advancing
+
+const HEAL_POTION_AMOUNT = 3;
+
+// --- Reactions / quick chat ---
+const ALLOWED_EMOJIS = ["😂", "😱", "🔥", "💀", "👏", "😭", "🎉", "👍"];
+const EXPRESSION_COOLDOWN_MS = 400;
 
 const SHOP_ITEMS = [
   {
     id: "heal_potion",
     name: "Heal Potion",
     icon: "🧪",
-    price: 15,
-    description: "Instantly restores 3 HP."
-  },
-  {
-    id: "extra_shield",
-    name: "Extra Shield",
-    icon: "🛡",
-    price: 20,
-    description: "Blocks the next hit you take, completely."
-  },
-  {
-    id: "revive_scroll",
-    name: "Revive Scroll",
-    icon: "📜",
-    price: 35,
-    description: "Instantly revives a downed teammate at the normal revive HP, skipping the wait."
+    price: 12,
+    description: `Instantly restores ${HEAL_POTION_AMOUNT} HP.`
   },
   {
     id: "damage_charm",
     name: "Damage Reduction Charm",
     icon: "🔰",
-    price: 18,
+    price: 16,
     description: "Halves the damage of the next hit you take."
+  },
+  {
+    id: "extra_shield",
+    name: "Extra Shield",
+    icon: "🛡",
+    price: 18,
+    description: "Blocks the next hit you take, completely."
   },
   {
     id: "skip_token",
     name: "Skip Token",
     icon: "🎫",
-    price: 30,
+    price: 32,
     description: "Auto-passes your next hard question, no answer needed."
+  },
+  {
+    id: "revive_scroll",
+    name: "Revive Scroll",
+    icon: "📜",
+    price: 34,
+    description: "Instantly revives a downed teammate at the normal revive HP, skipping the wait."
   }
 ];
 
@@ -187,6 +194,20 @@ function findMember(room, token) {
   return room.members.find((player) => player.token === token);
 }
 
+function canSendExpression(room, token) {
+  if (!room.lastExpressionAt) {
+    room.lastExpressionAt = new Map();
+  }
+
+  const now = Date.now();
+  const last = room.lastExpressionAt.get(token) || 0;
+
+  if (now - last < EXPRESSION_COOLDOWN_MS) return false;
+
+  room.lastExpressionAt.set(token, now);
+  return true;
+}
+
 function livingPlayers(room) {
   return room.members.filter(
     (player) => player.role === "player" && !player.dead
@@ -209,7 +230,52 @@ function normalizeAnswer(value) {
     .trim();
 }
 
-function questionPassed(question, answer) {
+function levenshteinDistance(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  let previousRow = Array.from(
+    { length: b.length + 1 },
+    (_, i) => i
+  );
+
+  for (let i = 0; i < a.length; i++) {
+    const currentRow = [i + 1];
+
+    for (let j = 0; j < b.length; j++) {
+      const insertCost = currentRow[j] + 1;
+      const deleteCost = previousRow[j + 1] + 1;
+      const substituteCost =
+        previousRow[j] + (a[i] === b[j] ? 0 : 1);
+
+      currentRow.push(
+        Math.min(insertCost, deleteCost, substituteCost)
+      );
+    }
+
+    previousRow = currentRow;
+  }
+
+  return previousRow[b.length];
+}
+
+function typoThreshold(length) {
+  if (length <= 3) return 0;
+  if (length <= 7) return 1;
+  if (length <= 12) return 2;
+  return 3;
+}
+
+function fuzzyMatches(submitted, accepted) {
+  if (submitted === accepted) return true;
+  if (!submitted || !accepted) return false;
+
+  const distance = levenshteinDistance(submitted, accepted);
+  return distance <= typoThreshold(accepted.length);
+}
+
+function questionPassed(question, answer, typoTolerance = true) {
   const answers = Array.isArray(question.answers) ? question.answers : [];
 
   if (question.type === "multiple-choice") {
@@ -218,7 +284,14 @@ function questionPassed(question, answer) {
 
   if (question.type === "identification") {
     const normalized = normalizeAnswer(answer);
-    return answers.some((item) => normalizeAnswer(item) === normalized);
+
+    return answers.some((item) => {
+      const acceptedNormalized = normalizeAnswer(item);
+
+      return typoTolerance
+        ? fuzzyMatches(normalized, acceptedNormalized)
+        : normalized === acceptedNormalized;
+    });
   }
 
   if (question.type === "list") {
@@ -227,8 +300,15 @@ function questionPassed(question, answer) {
       .map((item) => normalizeAnswer(item))
       .filter(Boolean);
 
-    const accepted = new Set(answers.map(normalizeAnswer));
-    return entered.some((item) => accepted.has(item));
+    const accepted = answers.map(normalizeAnswer);
+
+    return entered.some((item) =>
+      accepted.some((acceptedItem) =>
+        typoTolerance
+          ? fuzzyMatches(item, acceptedItem)
+          : item === acceptedItem
+      )
+    );
   }
 
   return false;
@@ -273,8 +353,38 @@ function getRules(room) {
     pointsPerDamage: Math.max(
       0,
       Number(custom.pointsPerDamage ?? POINTS_PER_DAMAGE)
-    )
+    ),
+    typoTolerance: custom.typoTolerance !== false,
+    healPotionAmount: Math.max(
+      0,
+      Number(custom.healPotionAmount ?? HEAL_POTION_AMOUNT)
+    ),
+    shopPrices: (custom.shopPrices && typeof custom.shopPrices === "object")
+      ? custom.shopPrices
+      : {}
   };
+}
+
+function getShopItems(room) {
+  const rules = getRules(room);
+
+  return SHOP_ITEMS.map((item) => {
+    const override = Number(rules.shopPrices[item.id]);
+
+    const price = Number.isFinite(override) && override >= 0
+      ? override
+      : item.price;
+
+    if (item.id === "heal_potion") {
+      return {
+        ...item,
+        price,
+        description: `Instantly restores ${rules.healPotionAmount} HP.`
+      };
+    }
+
+    return { ...item, price };
+  });
 }
 
 function chooseThreeGames(room) {
@@ -320,6 +430,7 @@ function createRoom(name, token) {
     shield: false,
     damageReduction: false,
     skipHardToken: false,
+    shopReady: false,
     downRounds: 0,
     points: 0,
     dead: false
@@ -352,6 +463,12 @@ function createRoom(name, token) {
     roundsPlayed: 0,
     lastShopRound: 0,
     shopEndsAt: null,
+
+    paused: false,
+    pausedField: null,
+    pausedRemainingMs: null,
+
+    autoAdvance: false,
 
     gameOver: null,
     revealId: 0
@@ -388,6 +505,7 @@ function publicRoomState(room, viewerToken) {
       downRounds: player.downRounds || 0,
       reviveRoundsRequired: getRules(room).reviveRoundsRequired,
       points: player.role === "player" ? player.points || 0 : null,
+      shopReady: Boolean(player.shopReady),
       dead: player.dead,
 
       // A player sees only their own vote.
@@ -442,9 +560,12 @@ function publicRoomState(room, viewerToken) {
     timerEndsAt: room.timerEndsAt,
     choiceEndsAt: room.choiceEndsAt,
     shopEndsAt: room.shopEndsAt,
-    shopItems: SHOP_ITEMS,
+    shopItems: getShopItems(room),
     roundsPlayed: room.roundsPlayed || 0,
     shopInterval: SHOP_INTERVAL,
+
+    paused: Boolean(room.paused),
+    autoAdvance: Boolean(room.autoAdvance),
 
     submittedIds: [...room.submitted.keys()]
       .map((token) => findMember(room, token)?.publicId)
@@ -476,6 +597,10 @@ function beginChoices(room) {
   room.choiceEndsAt = Date.now() + VOTE_SECONDS * 1000;
   room.gameChoices = chooseThreeGames(room);
   room.revealedAnswers = [];
+
+  room.paused = false;
+  room.pausedField = null;
+  room.pausedRemainingMs = null;
 
   if (!room.gameChoices.length) {
     finishGame(room, "NO UNUSED QUESTIONS REMAIN");
@@ -529,6 +654,10 @@ function beginQuestion(room) {
   room.submitted = new Map();
   room.revealedAnswers = [];
 
+  room.paused = false;
+  room.pausedField = null;
+  room.pausedRemainingMs = null;
+
   room.revealId += 1;
 
   emitRoom(room);
@@ -558,13 +687,89 @@ function advanceRound(room) {
   beginChoices(room);
 }
 
+function progressAfterReveal(room) {
+  if (!room || room.phase !== "reveal" || room.gameOver) return;
+
+  const roundsPlayed = room.roundsPlayed || 0;
+
+  if (
+    roundsPlayed > 0 &&
+    roundsPlayed % SHOP_INTERVAL === 0 &&
+    room.lastShopRound !== roundsPlayed
+  ) {
+    room.lastShopRound = roundsPlayed;
+    beginShop(room);
+    return;
+  }
+
+  advanceRound(room);
+}
+
+function activeTimerField(room) {
+  if (room.phase === "question") return "timerEndsAt";
+  if (room.phase === "choices") return "choiceEndsAt";
+  if (room.phase === "shop") return "shopEndsAt";
+  return null;
+}
+
+function pauseRoom(room) {
+  if (room.paused) return;
+
+  const field = activeTimerField(room);
+
+  if (!field || !room[field]) return;
+
+  room.pausedField = field;
+  room.pausedRemainingMs = Math.max(0, room[field] - Date.now());
+  room[field] = null;
+  room.paused = true;
+
+  emitRoom(room);
+}
+
+function resumeRoom(room) {
+  if (!room.paused) return;
+
+  const field = room.pausedField;
+
+  if (field) {
+    room[field] = Date.now() + (room.pausedRemainingMs || 0);
+  }
+
+  room.paused = false;
+  room.pausedField = null;
+  room.pausedRemainingMs = null;
+
+  emitRoom(room);
+}
+
 function beginShop(room) {
   room.phase = "shop";
   room.timerEndsAt = null;
   room.choiceEndsAt = null;
   room.shopEndsAt = Date.now() + SHOP_SECONDS * 1000;
 
+  room.paused = false;
+  room.pausedField = null;
+  room.pausedRemainingMs = null;
+
+  for (const player of room.members) {
+    if (player.role === "player") {
+      player.shopReady = false;
+    }
+  }
+
   emitRoom(room);
+}
+
+function allLivingPlayersShopReady(room) {
+  const livingPlayers = room.members.filter(
+    (player) => player.role === "player" && !player.dead
+  );
+
+  if (!livingPlayers.length) return false;
+
+  return livingPlayers.every((player) => player.shopReady);
 }
 
 function endShop(room) {
@@ -646,6 +851,10 @@ function revealQuestion(room) {
   room.timerEndsAt = null;
   room.roundsPlayed = (room.roundsPlayed || 0) + 1;
 
+  room.paused = false;
+  room.pausedField = null;
+  room.pausedRemainingMs = null;
+
   const rules = getRules(room);
 
   const isHardQuestion =
@@ -698,7 +907,11 @@ function revealQuestion(room) {
 
     let passed =
       Boolean(submission) &&
-      questionPassed(room.currentQuestion, answer);
+      questionPassed(
+        room.currentQuestion,
+        answer,
+        rules.typoTolerance
+      );
 
     let skippedWithToken = false;
 
@@ -862,6 +1075,25 @@ function revealQuestion(room) {
   }
 
   emitRoom(room);
+
+  if (room.autoAdvance) {
+    const revealIdAtSchedule = room.revealId;
+
+    setTimeout(() => {
+      const currentRoom = rooms.get(room.code);
+
+      if (
+        !currentRoom ||
+        currentRoom.phase !== "reveal" ||
+        currentRoom.revealId !== revealIdAtSchedule ||
+        currentRoom.paused
+      ) {
+        return;
+      }
+
+      progressAfterReveal(currentRoom);
+    }, AUTO_ADVANCE_DELAY_MS);
+  }
 }
 
 io.on("connection", (socket) => {
@@ -950,6 +1182,7 @@ io.on("connection", (socket) => {
       shield: false,
       damageReduction: false,
       skipHardToken: false,
+      shopReady: false,
       downRounds: 0,
       points: 0,
       dead: false
@@ -1051,6 +1284,7 @@ io.on("connection", (socket) => {
         player.shield = false;
         player.damageReduction = false;
         player.skipHardToken = false;
+        player.shopReady = false;
         player.downRounds = 0;
         player.points = 0;
         player.dead = false;
@@ -1218,6 +1452,73 @@ io.on("connection", (socket) => {
     revealQuestion(room);
   });
 
+  socket.on("sendReaction", ({ emoji } = {}) => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room) return;
+
+    const member = findMember(room, socket.data.token);
+
+    if (!member) return;
+
+    if (!ALLOWED_EMOJIS.includes(emoji)) return;
+
+    if (!canSendExpression(room, member.token)) return;
+
+    io.to(room.code).emit("reaction", {
+      id: member.publicId,
+      name: member.name,
+      emoji
+    });
+  });
+
+  socket.on("sendChat", ({ text } = {}) => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room) return;
+
+    const member = findMember(room, socket.data.token);
+
+    if (!member) return;
+
+    const safeText = String(text || "")
+      .replace(/[\r\n\t]/g, " ")
+      .trim()
+      .slice(0, 60);
+
+    if (!safeText) return;
+
+    if (!canSendExpression(room, member.token)) return;
+
+    io.to(room.code).emit("chatMessage", {
+      id: member.publicId,
+      name: member.name,
+      text: safeText
+    });
+  });
+
+  socket.on("togglePause", () => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.hostToken !== socket.data.token) return;
+
+    if (room.paused) {
+      resumeRoom(room);
+    } else {
+      pauseRoom(room);
+    }
+  });
+
+  socket.on("toggleAutoAdvance", () => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.hostToken !== socket.data.token) return;
+
+    room.autoAdvance = !room.autoAdvance;
+
+    emitRoom(room);
+  });
+
   socket.on("skipShop", () => {
     const room = rooms.get(socket.data.roomCode);
 
@@ -1232,6 +1533,25 @@ io.on("connection", (socket) => {
     endShop(room);
   });
 
+  socket.on("shopReady", () => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.phase !== "shop") return;
+
+    const player = findMember(room, socket.data.token);
+
+    if (!player || player.role !== "player" || player.dead) return;
+
+    player.shopReady = !player.shopReady;
+
+    if (allLivingPlayersShopReady(room)) {
+      endShop(room);
+      return;
+    }
+
+    emitRoom(room);
+  });
+
   socket.on("nextRound", () => {
     const room = rooms.get(socket.data.roomCode);
 
@@ -1243,21 +1563,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (room.gameOver) return;
-
-    const roundsPlayed = room.roundsPlayed || 0;
-
-    if (
-      roundsPlayed > 0 &&
-      roundsPlayed % SHOP_INTERVAL === 0 &&
-      room.lastShopRound !== roundsPlayed
-    ) {
-      room.lastShopRound = roundsPlayed;
-      beginShop(room);
-      return;
-    }
-
-    advanceRound(room);
+    progressAfterReveal(room);
   });
 
   socket.on("buyItem", ({ itemId, targetId } = {}) => {
@@ -1269,7 +1575,11 @@ io.on("connection", (socket) => {
 
     if (!player || player.role !== "player") return;
 
-    const item = SHOP_ITEMS.find((entry) => entry.id === itemId);
+    const rules = getRules(room);
+
+    const item = getShopItems(room).find(
+      (entry) => entry.id === itemId
+    );
 
     if (!item) return;
 
@@ -1277,8 +1587,6 @@ io.on("connection", (socket) => {
       socket.emit("errorMessage", "Not enough points for that.");
       return;
     }
-
-    const rules = getRules(room);
 
     switch (itemId) {
       case "heal_potion": {
@@ -1295,7 +1603,10 @@ io.on("connection", (socket) => {
           return;
         }
 
-        player.hp = Math.min(room.startingHp, player.hp + 3);
+        player.hp = Math.min(
+          room.startingHp,
+          player.hp + rules.healPotionAmount
+        );
         break;
       }
 
@@ -1374,6 +1685,65 @@ io.on("connection", (socket) => {
     }
 
     player.points -= item.price;
+
+    emitRoom(room);
+  });
+
+  socket.on("gmGrantPoints", ({ targetId, amount } = {}) => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.hostToken !== socket.data.token) return;
+
+    const target = room.members.find(
+      (member) =>
+        member.publicId === targetId && member.role === "player"
+    );
+
+    if (!target) return;
+
+    const delta = Math.round(Number(amount));
+
+    if (!Number.isFinite(delta) || delta === 0) return;
+
+    target.points = Math.max(0, (target.points || 0) + delta);
+
+    emitRoom(room);
+  });
+
+  socket.on("gmGrantHp", ({ targetId, amount } = {}) => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.hostToken !== socket.data.token) return;
+
+    const target = room.members.find(
+      (member) =>
+        member.publicId === targetId && member.role === "player"
+    );
+
+    if (!target) return;
+
+    const delta = Math.round(Number(amount));
+
+    if (!Number.isFinite(delta) || delta === 0) return;
+
+    const newHp = Math.max(
+      0,
+      Math.min(room.startingHp, (target.hp || 0) + delta)
+    );
+
+    target.hp = newHp;
+
+    if (newHp <= 0) {
+      // GM knocked them out — treat it like any other down.
+      if (!target.dead) {
+        target.dead = true;
+        target.downRounds = 0;
+      }
+    } else if (target.dead) {
+      // GM topped them back up — bring them back into the fight.
+      target.dead = false;
+      target.downRounds = 0;
+    }
 
     emitRoom(room);
   });

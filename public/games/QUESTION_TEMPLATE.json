@@ -14,7 +14,17 @@
     "reviveRoundsRequired": 2,
     "reviveHpPercent": 0.5,
     "teamHealAmount": 1,
-    "pointsPerDamage": 10
+    "pointsPerDamage": 10,
+    "typoTolerance": true,
+    "healPotionAmount": 3,
+    "_comment_shopPrices": "Optional per-game price overrides. Omit an item id to keep its default price (heal_potion 12, damage_charm 16, extra_shield 18, skip_token 32, revive_scroll 34).",
+    "shopPrices": {
+      "heal_potion": 12,
+      "damage_charm": 16,
+      "extra_shield": 18,
+      "skip_token": 32,
+      "revive_scroll": 34
+    }
   },
 
   "questions": [

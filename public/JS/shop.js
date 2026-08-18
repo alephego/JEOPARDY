@@ -17,6 +17,33 @@ const elements = {
   ),
   cancelRevive: document.getElementById(
     "cancelRevive"
+  ),
+  readyButton: document.getElementById(
+    "readyButton"
+  ),
+  readyStatus: document.getElementById(
+    "shopReadyStatus"
+  ),
+  gmAdminPanel: document.getElementById(
+    "gmAdminPanel"
+  ),
+  gmTargetSelect: document.getElementById(
+    "gmTargetSelect"
+  ),
+  gmAmount: document.getElementById(
+    "gmAmount"
+  ),
+  gmGivePoints: document.getElementById(
+    "gmGivePoints"
+  ),
+  gmGiveHp: document.getElementById(
+    "gmGiveHp"
+  ),
+  pausedBanner: document.getElementById(
+    "pausedBanner"
+  ),
+  gmPauseButton: document.getElementById(
+    "gmPauseButton"
   )
 };
 
@@ -65,6 +92,12 @@ socket.on("roomState", (state) => {
 
   renderShop(state);
   startCountdown(state.shopEndsAt);
+  updatePausedUi(state);
+
+  if (state.paused) {
+    clearInterval(timerHandle);
+    elements.timer.textContent = "⏸";
+  }
 });
 
 function redirectForPhase(phase) {
@@ -188,6 +221,12 @@ function renderShop(state) {
         return;
       }
 
+      card.classList.add("purchase-flash");
+      setTimeout(
+        () => card.classList.remove("purchase-flash"),
+        700
+      );
+
       socket.emit("buyItem", {
         itemId: item.id
       });
@@ -197,7 +236,156 @@ function renderShop(state) {
   }
 
   renderTeamPoints(state);
+  renderReadyState(state, me, isPlayer);
+  renderGmAdmin(state, me);
 }
+
+function renderReadyState(state, me, isPlayer) {
+  if (!isPlayer) {
+    elements.readyButton.classList.add(
+      "hidden"
+    );
+
+    elements.readyStatus.textContent =
+      "";
+
+    return;
+  }
+
+  if (me.dead) {
+    elements.readyButton.classList.add(
+      "hidden"
+    );
+
+    elements.readyStatus.textContent =
+      "You're down — the team decides when to move on.";
+
+    return;
+  }
+
+  elements.readyButton.classList.remove(
+    "hidden"
+  );
+
+  elements.readyButton.textContent = me.shopReady
+    ? "NOT READY"
+    : "READY";
+
+  elements.readyButton.classList.toggle(
+    "secondary",
+    me.shopReady
+  );
+
+  elements.readyButton.classList.toggle(
+    "primary",
+    !me.shopReady
+  );
+
+  const livingPlayers = state.members.filter(
+    (player) =>
+      player.role === "player" && !player.dead
+  );
+
+  const readyCount = livingPlayers.filter(
+    (player) => player.shopReady
+  ).length;
+
+  elements.readyStatus.textContent =
+    `${readyCount} / ${livingPlayers.length} READY`;
+}
+
+function renderGmAdmin(state, me) {
+  const isGm =
+    me?.role === "gm" ||
+    state.selfRole === "gm" ||
+    sessionStorage.getItem("jeopardyRole") === "gm";
+
+  elements.gmAdminPanel.classList.toggle(
+    "hidden",
+    !isGm
+  );
+
+  if (!isGm) return;
+
+  const players = state.members.filter(
+    (player) => player.role === "player"
+  );
+
+  const previousSelection =
+    elements.gmTargetSelect.value;
+
+  elements.gmTargetSelect.innerHTML = players
+    .map(
+      (player) =>
+        `<option value="${player.id}">
+          ${escapeHtml(player.name)}
+          ${
+            player.dead
+              ? "(DOWN)"
+              : `(${player.hp} HP, ${player.points || 0} PTS)`
+          }
+        </option>`
+    )
+    .join("");
+
+  if (
+    players.some(
+      (player) => player.id === previousSelection
+    )
+  ) {
+    elements.gmTargetSelect.value =
+      previousSelection;
+  }
+}
+
+elements.readyButton.addEventListener(
+  "click",
+  () => {
+    socket.emit("shopReady");
+  }
+);
+
+elements.gmGivePoints.addEventListener(
+  "click",
+  () => {
+    const targetId =
+      elements.gmTargetSelect.value;
+
+    const amount = Number(
+      elements.gmAmount.value
+    );
+
+    if (!targetId || !Number.isFinite(amount)) {
+      return;
+    }
+
+    socket.emit("gmGrantPoints", {
+      targetId,
+      amount
+    });
+  }
+);
+
+elements.gmGiveHp.addEventListener(
+  "click",
+  () => {
+    const targetId =
+      elements.gmTargetSelect.value;
+
+    const amount = Number(
+      elements.gmAmount.value
+    );
+
+    if (!targetId || !Number.isFinite(amount)) {
+      return;
+    }
+
+    socket.emit("gmGrantHp", {
+      targetId,
+      amount
+    });
+  }
+);
 
 function openReviveTargets(item, downedTeammates) {
   pendingReviveItem = item;
@@ -325,3 +513,32 @@ function escapeHtml(value) {
 
   return element.innerHTML;
 }
+
+function updatePausedUi(state) {
+  elements.pausedBanner?.classList.toggle(
+    "hidden",
+    !state.paused
+  );
+
+  const isGm =
+    state.selfRole === "gm" ||
+    sessionStorage.getItem("jeopardyRole") ===
+      "gm";
+
+  if (!elements.gmPauseButton) return;
+
+  elements.gmPauseButton.classList.toggle(
+    "hidden",
+    !isGm
+  );
+
+  elements.gmPauseButton.textContent =
+    state.paused ? "▶ RESUME" : "⏸ PAUSE";
+}
+
+elements.gmPauseButton?.addEventListener(
+  "click",
+  () => {
+    socket.emit("togglePause");
+  }
+);
