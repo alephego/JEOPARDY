@@ -1,6 +1,7 @@
 {
   "id": "lies-of-p",
   "name": "Lies of P",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF LIES OF P TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

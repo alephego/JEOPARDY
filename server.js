@@ -521,6 +521,7 @@ function publicRoomState(room, viewerToken) {
       return {
         id,
         name: choice?.name || id,
+        description: choice?.description || "",
         theme: choice?.theme || {},
         votes: [...room.gameVotes.values()].filter(
           (vote) => vote === id
@@ -532,6 +533,7 @@ function publicRoomState(room, viewerToken) {
       ? {
           id: game.id,
           name: game.name,
+          description: game.description || "",
           theme: game.theme || {}
         }
       : null,
@@ -1686,6 +1688,10 @@ io.on("connection", (socket) => {
 
     player.points -= item.price;
 
+    // Buying something after marking READY means you're still deciding —
+    // don't let the shop end out from under you mid-purchase.
+    player.shopReady = false;
+
     emitRoom(room);
   });
 
@@ -1746,18 +1752,6 @@ io.on("connection", (socket) => {
     }
 
     emitRoom(room);
-  });
-
-  socket.on("returnToLobby", () => {
-    const room = rooms.get(socket.data.roomCode);
-
-    if (!room) return;
-
-    const player = findMember(room, socket.data.token);
-
-    if (!player) return;
-
-    socket.emit("returnToLobbyAccepted");
   });
 
   socket.on("disconnect", () => {

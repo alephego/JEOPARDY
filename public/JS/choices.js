@@ -146,6 +146,25 @@ function renderChoices(state) {
     title.textContent =
       game.name;
 
+    button.appendChild(title);
+
+    if (game.description) {
+      const description =
+        document.createElement(
+          "p"
+        );
+
+      description.className =
+        "choice-description";
+
+      description.textContent =
+        game.description;
+
+      button.appendChild(
+        description
+      );
+    }
+
     const votes =
       document.createElement(
         "span"
@@ -161,10 +180,7 @@ function renderChoices(state) {
           : "S"
       }`;
 
-    button.append(
-      title,
-      votes
-    );
+    button.append(votes);
 
     if (
       me?.vote === game.id

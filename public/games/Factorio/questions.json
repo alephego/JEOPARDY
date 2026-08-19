@@ -1,6 +1,7 @@
 {
   "id": "factorio",
   "name": "Factorio",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF FACTORIO TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

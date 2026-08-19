@@ -1,6 +1,7 @@
 {
   "id": "bloodborne",
   "name": "Bloodborne",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF BLOODBORNE TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

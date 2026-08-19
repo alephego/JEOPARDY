@@ -332,8 +332,15 @@ input:focus,
 }
 .game-choice:disabled { opacity: .72; cursor: default; }
 .game-choice strong,
-.game-choice span { position: relative; z-index: 2; }
-.game-choice strong { display: block; font-size: 24px; margin-bottom: 14px; }
+.game-choice span,
+.game-choice .choice-description { position: relative; z-index: 2; }
+.game-choice strong { display: block; font-size: 24px; margin-bottom: 8px; }
+.choice-description {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .choice-votes { color: var(--gold); font-size: 12px; font-weight: 900; letter-spacing: .1em; }
 .vote-status { min-height: 24px; margin-top: 18px; color: var(--muted); text-align: center; }
 

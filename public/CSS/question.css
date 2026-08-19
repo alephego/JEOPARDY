@@ -303,9 +303,6 @@ body {
 .status.success { color:var(--green); }
 .status.error { color:var(--red); }
 
-.gm-controls { display:flex; gap:10px; justify-content:center; margin-top:24px; }
-.gm-btn { padding:11px 15px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.05); color:white; cursor:pointer; }
-
 .reveals { width:min(1200px,94%); margin:auto; padding:0 0 50px; }
 .section-label { color:var(--muted); font-size:11px; font-weight:900; letter-spacing:.16em; margin-bottom:12px; }
 .answer-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
@@ -489,13 +486,6 @@ body {
 .hit-flash { animation:cardHit .48s ease; }
 @keyframes cardHit { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-8px) rotate(-1deg); } 50% { transform:translateX(10px) rotate(1deg); } 75% { transform:translateX(-5px); } }
 
-.death-hit { animation:deathFall .9s cubic-bezier(.2,.9,.2,1) forwards; transform-origin:50% 100%; }
-@keyframes deathFall {
-  0% { transform:translateY(0) rotate(0); opacity:1; }
-  35% { transform:translateY(-12px) rotate(-3deg); }
-  100% { transform:translateY(70px) rotate(14deg); opacity:.42; }
-}
-
 .death-skull {
   position:absolute;
   inset:0;
@@ -550,32 +540,6 @@ body {
     transform:translate3d(12px,95px,0) rotate(14deg);
     opacity:.35;
   }
-}
-
-.gm-controls{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-wrap:wrap;
-  gap:10px;
-  width:min(900px,94%);
-  margin:24px auto 0;
-  padding:14px;
-  border:2px solid var(--game-accent2);
-  border-radius:14px;
-  background:rgba(3,7,16,.94);
-  box-shadow:0 0 28px color-mix(in srgb,var(--game-accent2) 18%,transparent);
-  position:relative;
-  z-index:10;
-}
-
-.gm-label{
-  width:100%;
-  text-align:center;
-  color:var(--game-accent2);
-  font-size:11px;
-  font-weight:1000;
-  letter-spacing:.18em;
 }
 
 .gm-btn{
@@ -844,5 +808,40 @@ body {
 
   .gm-btn-icon{
     font-size: 14px;
+  }
+}
+
+/* On this page the "JEOPARDY" logo sits top-left, so move the rules
+   button out of its way. */
+.rules-widget{
+  top: auto;
+  bottom: 90px;
+  left: 16px;
+}
+
+@media(max-width: 650px){
+  .rules-widget{
+    bottom: 80px;
+    left: 10px;
+  }
+}
+
+/* Keep the reaction widget clear of the fixed bottom GM console,
+   the timer circle (top-right of the header), and the paused banner —
+   sit it just below the header on this page only. */
+.expr-widget{
+  right: 16px;
+  bottom: auto;
+  top: 92px;
+}
+
+.expr-feed{
+  align-items: flex-end;
+}
+
+@media(max-width: 850px){
+  .expr-widget{
+    top: 90px;
+    right: 12px;
   }
 }

@@ -1,6 +1,7 @@
 {
   "id": "pokemon",
   "name": "pokemon",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF POKEMON TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

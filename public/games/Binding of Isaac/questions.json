@@ -1,6 +1,7 @@
 {
   "id": "binding-of-isaac",
   "name": "Binding of Isaac",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF BINDING OF ISAAC TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

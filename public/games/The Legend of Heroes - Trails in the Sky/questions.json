@@ -1,6 +1,7 @@
 {
   "id": "the-legend-of-heroes-trails-in-the-sky",
   "name": "The Legend of Heroes - Trails in the Sky",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF THE LEGEND OF HEROES - TRAILS IN THE SKY TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

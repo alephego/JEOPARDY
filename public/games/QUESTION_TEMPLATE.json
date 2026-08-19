@@ -1,6 +1,8 @@
 {
   "id": "game-id",
   "name": "Game Name",
+  "_comment_description": "Optional but shown on the vote screen so players know what they're picking before it's revealed. Keep it short — one or two sentences.",
+  "description": "A short blurb about what this game/category covers.",
   "theme": {
     "background": "background.jpg",
     "accent": "#735cff",

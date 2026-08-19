@@ -1,6 +1,7 @@
 {
   "id": "persona-series",
   "name": "Persona Series",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF PERSONA SERIES TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

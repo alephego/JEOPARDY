@@ -1,6 +1,7 @@
 {
   "id": "elden-ring",
   "name": "Elden Ring",
+  "description": "REPLACE WITH A SHORT DESCRIPTION OF ELDEN RING TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

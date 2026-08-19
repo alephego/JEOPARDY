@@ -82,6 +82,7 @@ let currentPhase = null;
 
 let selectedChoice = null;
 let submitted = false;
+let wasDownThisQuestion = false;
 let timerHandle = null;
 let serverClockOffset = 0;
 let lastRevealId = null;
@@ -231,6 +232,14 @@ function prepareQuestion(state) {
 
   selectedChoice = null;
   submitted = false;
+
+  const meAtStart = state.members.find(
+    (player) => player.id === selfId
+  );
+
+  wasDownThisQuestion = Boolean(
+    meAtStart?.dead
+  );
 
   elements.game.textContent =
     state.selectedGameInfo?.name ||
@@ -393,6 +402,25 @@ function updateQuestionState(state) {
 
     elements.status.className =
       "status error";
+
+    wasDownThisQuestion = true;
+  } else if (
+    wasDownThisQuestion &&
+    state.phase === "question" &&
+    !meSubmitted
+  ) {
+    // The GM revived us mid-round (e.g. via Grant HP) — we were
+    // locked out at question-start, so re-enable the answer form
+    // instead of leaving it disabled for the rest of this round.
+    wasDownThisQuestion = false;
+
+    if (state.currentQuestion) {
+      resetAnswerInputs();
+      renderAnswerType(state.currentQuestion);
+    }
+
+    elements.status.textContent = "";
+    elements.status.className = "status";
   }
 
   renderPlayerStatus(state);
