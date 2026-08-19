@@ -16,7 +16,7 @@
 
   <main class="question-screen">
     <header class="question-hud">
-      <div class="brand">JEOPARDY <span class="build-tag">BUILD 14</span></div>
+      <div class="brand">JEOPARDY <span class="build-tag">BUILD 16</span></div>
       <div class="hud-block"><span>GAME</span><strong id="game">---</strong></div>
       <div class="hud-block"><span>QUESTION</span><strong id="qn">1</strong></div>
       <div class="hud-block"><span>DAMAGE</span><strong id="damage">1 HP</strong></div>
@@ -43,9 +43,13 @@
       <div id="media" class="media"></div>
 
       <div id="list" class="answer-area hidden">
-        <input id="listInput" placeholder="TYPE YOUR ANSWER..." autocomplete="off">
-        <button id="listSubmit" class="submit">SUBMIT ANSWER</button>
-        <small>Separate multiple answers with commas.</small>
+        <div class="list-add-row">
+          <input id="listInput" placeholder="TYPE ONE ANSWER, THEN ADD..." autocomplete="off">
+          <button id="listAdd" class="submit list-add-btn">ADD</button>
+        </div>
+        <div id="listChips" class="list-chips"></div>
+        <button id="listSubmit" class="submit">LOCK IN ANSWERS</button>
+        <small>Add as many as you can, one at a time, then lock in when you're done.</small>
       </div>
 
       <div id="ident" class="answer-area hidden">

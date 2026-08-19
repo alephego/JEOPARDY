@@ -40,6 +40,10 @@ const elements = {
   identificationInput:
     document.getElementById("identInput"),
 
+  listAdd:
+    document.getElementById("listAdd"),
+  listChips:
+    document.getElementById("listChips"),
   listSubmit:
     document.getElementById("listSubmit"),
   identificationSubmit:
@@ -775,10 +779,14 @@ function resetAnswerInputs() {
   [
     elements.listSubmit,
     elements.identificationSubmit,
-    elements.multipleChoiceSubmit
+    elements.multipleChoiceSubmit,
+    elements.listAdd
   ].forEach((button) => {
     button.disabled = false;
   });
+
+  myListItems = [];
+  elements.listChips.innerHTML = "";
 
   document
     .querySelectorAll(
@@ -981,12 +989,141 @@ function sendAnswer(answer) {
   );
 }
 
+let myListItems = [];
+
+elements.listAdd.addEventListener(
+  "click",
+  addListItem
+);
+
+function addListItem() {
+  const value =
+    elements.listInput.value.trim();
+
+  if (!value) return;
+
+  socket.emit(
+    "submitListItem",
+    value
+  );
+
+  elements.listInput.value = "";
+  elements.listInput.focus();
+}
+
+socket.on(
+  "listItemAdded",
+  ({ items, results }) => {
+    renderListChips(
+      Array.isArray(items) ? items : [],
+      Array.isArray(results) ? results : []
+    );
+  }
+);
+
+function renderListChips(items, results) {
+  const previous = myListItems;
+  myListItems = items;
+
+  elements.listChips.innerHTML = "";
+
+  items.forEach((item, index) => {
+    const chip =
+      document.createElement("span");
+
+    const isCorrect = Boolean(
+      results[index]
+    );
+
+    chip.className =
+      `list-chip ${
+        isCorrect
+          ? "list-chip-correct"
+          : "list-chip-wrong"
+      }`;
+
+    const isNew =
+      index === items.length - 1 &&
+      !previous.includes(item);
+
+    // The newest item auto-reveals whether it hit — a quick pop for a
+    // correct guess, a shake for a miss.
+    if (isNew) {
+      chip.classList.add(
+        isCorrect
+          ? "list-chip-reveal-correct"
+          : "list-chip-reveal-wrong"
+      );
+    }
+
+    const badge =
+      document.createElement("span");
+
+    badge.className = "list-chip-badge";
+    badge.textContent = isCorrect
+      ? "✓"
+      : "✕";
+
+    const label =
+      document.createElement("span");
+
+    label.textContent = item;
+
+    const remove =
+      document.createElement("button");
+
+    remove.className =
+      "list-chip-remove";
+    remove.type = "button";
+    remove.textContent = "✕";
+    remove.setAttribute(
+      "aria-label",
+      "Remove"
+    );
+
+    remove.addEventListener(
+      "click",
+      () => {
+        chip.classList.add(
+          "list-chip-out"
+        );
+
+        setTimeout(() => {
+          socket.emit(
+            "removeListItem",
+            item
+          );
+        }, 220);
+      }
+    );
+
+    chip.append(
+      badge,
+      label,
+      remove
+    );
+
+    elements.listChips.appendChild(
+      chip
+    );
+  });
+}
+
 elements.listSubmit.addEventListener(
   "click",
-  () =>
-    sendAnswer(
-      elements.listInput.value
-    )
+  () => {
+    if (!myListItems.length) {
+      elements.status.textContent =
+        "Add at least one answer first.";
+
+      elements.status.className =
+        "status error";
+
+      return;
+    }
+
+    socket.emit("lockListAnswer");
+  }
 );
 
 elements.identificationSubmit.addEventListener(
@@ -1016,21 +1153,26 @@ elements.multipleChoiceSubmit.addEventListener(
   }
 );
 
-[
-  elements.listInput,
-  elements.identificationInput
-].forEach((input) => {
-  input.addEventListener(
-    "keydown",
-    (event) => {
-      if (event.key === "Enter") {
-        sendAnswer(
-          input.value
-        );
-      }
+elements.listInput.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addListItem();
     }
-  );
-});
+  }
+);
+
+elements.identificationInput.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.key === "Enter") {
+      sendAnswer(
+        elements.identificationInput.value
+      );
+    }
+  }
+);
 
 document
   .querySelectorAll(
@@ -1075,7 +1217,8 @@ function disableAnswerInputs() {
   [
     elements.listSubmit,
     elements.identificationSubmit,
-    elements.multipleChoiceSubmit
+    elements.multipleChoiceSubmit,
+    elements.listAdd
   ].forEach(
     (button) =>
       (button.disabled = true)

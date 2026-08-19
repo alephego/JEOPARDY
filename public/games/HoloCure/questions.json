@@ -1,7 +1,6 @@
 {
   "id": "holocure",
   "name": "HoloCure",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF HOLOCURE TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

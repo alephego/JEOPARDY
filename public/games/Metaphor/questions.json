@@ -1,7 +1,6 @@
 {
   "id": "metaphor",
   "name": "Metaphor",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF METAPHOR TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

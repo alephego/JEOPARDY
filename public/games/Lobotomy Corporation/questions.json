@@ -1,7 +1,6 @@
 {
   "id": "lobotomy-corporation",
   "name": "Lobotomy Corporation",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF LOBOTOMY CORPORATION TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

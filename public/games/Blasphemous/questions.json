@@ -1,7 +1,6 @@
 {
   "id": "blasphemous",
   "name": "Blasphemous",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF BLASPHEMOUS TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

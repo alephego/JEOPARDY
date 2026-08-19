@@ -1,7 +1,6 @@
 {
   "id": "mewgenics",
   "name": "Mewgenics",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF MEWGENICS TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

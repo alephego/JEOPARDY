@@ -1,7 +1,6 @@
 {
   "id": "child-of-light",
   "name": "Child of Light",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF CHILD OF LIGHT TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

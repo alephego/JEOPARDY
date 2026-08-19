@@ -1,7 +1,6 @@
 {
   "id": "megabonk",
   "name": "Megabonk",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF MEGABONK TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

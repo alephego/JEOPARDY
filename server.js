@@ -217,7 +217,10 @@ function livingPlayers(room) {
 function allLivingPlayersSubmitted(room) {
   const players = livingPlayers(room);
   return players.length > 0 &&
-    players.every((player) => room.submitted.has(player.token));
+    players.every((player) => {
+      const entry = room.submitted.get(player.token);
+      return Boolean(entry?.locked);
+    });
 }
 
 function normalizeAnswer(value) {
@@ -294,24 +297,65 @@ function questionPassed(question, answer, typoTolerance = true) {
     });
   }
 
-  if (question.type === "list") {
-    const entered = String(answer || "")
-      .split(",")
-      .map((item) => normalizeAnswer(item))
-      .filter(Boolean);
+  // list type is scored separately via scoreListAnswer — see revealQuestion.
+  return false;
+}
 
-    const accepted = answers.map(normalizeAnswer);
+const LIST_ALL_REQUIRED_THRESHOLD = 5;
 
-    return entered.some((item) =>
-      accepted.some((acceptedItem) =>
-        typoTolerance
-          ? fuzzyMatches(item, acceptedItem)
-          : item === acceptedItem
-      )
+// Scores a list answer against the accepted list. Each submitted item can
+// only match one accepted answer (no double-counting the same item twice
+// via near-duplicate phrasing), and returns how many DISTINCT accepted
+// answers were covered.
+function itemMatchesAnyAccepted(item, question, typoTolerance = true) {
+  const accepted = (
+    Array.isArray(question.answers) ? question.answers : []
+  ).map(normalizeAnswer);
+
+  const normalized = normalizeAnswer(item);
+
+  if (!normalized) return false;
+
+  return accepted.some((acceptedItem) =>
+    typoTolerance
+      ? fuzzyMatches(normalized, acceptedItem)
+      : normalized === acceptedItem
+  );
+}
+
+function scoreListAnswer(question, items, typoTolerance = true) {
+  const accepted = (
+    Array.isArray(question.answers) ? question.answers : []
+  ).map(normalizeAnswer);
+
+  const submitted = (Array.isArray(items) ? items : [])
+    .map(normalizeAnswer)
+    .filter(Boolean);
+
+  const matchedAcceptedIndexes = new Set();
+
+  for (const entry of submitted) {
+    const matchIndex = accepted.findIndex(
+      (acceptedItem, index) =>
+        !matchedAcceptedIndexes.has(index) &&
+        (typoTolerance
+          ? fuzzyMatches(entry, acceptedItem)
+          : entry === acceptedItem)
     );
+
+    if (matchIndex !== -1) {
+      matchedAcceptedIndexes.add(matchIndex);
+    }
   }
 
-  return false;
+  const total = accepted.length;
+  const correct = matchedAcceptedIndexes.size;
+  const ratio = total > 0 ? correct / total : 0;
+
+  const requiresAll = total <= LIST_ALL_REQUIRED_THRESHOLD;
+  const fullyPassed = total > 0 && correct === total;
+
+  return { correct, total, ratio, requiresAll, fullyPassed };
 }
 
 function shuffle(items) {
@@ -569,8 +613,9 @@ function publicRoomState(room, viewerToken) {
     paused: Boolean(room.paused),
     autoAdvance: Boolean(room.autoAdvance),
 
-    submittedIds: [...room.submitted.keys()]
-      .map((token) => findMember(room, token)?.publicId)
+    submittedIds: [...room.submitted.entries()]
+      .filter(([, entry]) => entry?.locked)
+      .map(([token]) => findMember(room, token)?.publicId)
       .filter(Boolean),
 
     revealedAnswers: room.revealedAnswers,
@@ -906,14 +951,33 @@ function revealQuestion(room) {
 
     const submission = room.submitted.get(player.token);
     const answer = submission?.answer || "";
+    const isListQuestion = room.currentQuestion.type === "list";
 
-    let passed =
-      Boolean(submission) &&
-      questionPassed(
+    const baseDamage = Math.max(
+      1,
+      Number(room.currentQuestion.damage || 1)
+    );
+
+    let listScore = null;
+    let passed;
+
+    if (isListQuestion) {
+      listScore = scoreListAnswer(
         room.currentQuestion,
-        answer,
+        submission?.items || [],
         rules.typoTolerance
       );
+
+      passed = listScore.fullyPassed;
+    } else {
+      passed =
+        Boolean(submission) &&
+        questionPassed(
+          room.currentQuestion,
+          answer,
+          rules.typoTolerance
+        );
+    }
 
     let skippedWithToken = false;
 
@@ -922,9 +986,51 @@ function revealQuestion(room) {
       passed = true;
       skippedWithToken = true;
       player.skipHardToken = false;
+
+      if (isListQuestion) {
+        listScore = {
+          ...listScore,
+          fullyPassed: true,
+          ratio: 1
+        };
+      }
     }
 
-    let hit = !passed;
+    let damageDealt;
+    let pointsEarned;
+
+    if (skippedWithToken || (!isListQuestion && passed)) {
+      damageDealt = 0;
+      pointsEarned = questionPoints;
+    } else if (!isListQuestion) {
+      damageDealt = baseDamage;
+      pointsEarned = 0;
+    } else if (listScore.fullyPassed) {
+      damageDealt = 0;
+      pointsEarned = questionPoints;
+    } else if (listScore.requiresAll) {
+      // 5 or fewer required — all-or-nothing, and this wasn't a full clear.
+      damageDealt = baseDamage;
+      pointsEarned = 0;
+    } else {
+      // More than 5 required — scale damage/points by how much of the
+      // list was actually covered. Always at least 1 damage short of
+      // a full clear, never more than the question's base damage.
+      damageDealt =
+        listScore.ratio > 0
+          ? Math.max(
+              1,
+              Math.min(
+                baseDamage,
+                Math.round(baseDamage * (1 - listScore.ratio))
+              )
+            )
+          : baseDamage;
+
+      pointsEarned = Math.round(questionPoints * listScore.ratio);
+    }
+
+    let hit = damageDealt > 0;
     let shielded = false;
 
     if (hit && player.shield) {
@@ -932,16 +1038,10 @@ function revealQuestion(room) {
       hit = false;
       shielded = true;
       player.shield = false;
+      damageDealt = 0;
     }
 
-    let damageDealt = 0;
-
     if (hit) {
-      damageDealt = Math.max(
-        1,
-        Number(room.currentQuestion.damage || 1)
-      );
-
       if (player.damageReduction) {
         damageDealt = Math.max(1, Math.ceil(damageDealt / 2));
         player.damageReduction = false;
@@ -955,10 +1055,7 @@ function revealQuestion(room) {
       }
     }
 
-    let pointsEarned = 0;
-
-    if (passed) {
-      pointsEarned = questionPoints;
+    if (pointsEarned > 0) {
       player.points = (player.points || 0) + pointsEarned;
     }
 
@@ -967,14 +1064,22 @@ function revealQuestion(room) {
       hardRewardEarned = true;
     }
 
+    const displayAnswer = skippedWithToken
+      ? "SKIPPED (TOKEN)"
+      : isListQuestion
+      ? `${answer || "NO ANSWER"} (${listScore.correct}/${listScore.total} correct)`
+      : answer || "NO ANSWER";
+
     outcomes.push({
       id: player.publicId,
       name: player.name,
-      submitted: Boolean(submission),
+      submitted: isListQuestion
+        ? Boolean(submission?.items?.length)
+        : Boolean(submission),
       passed,
-      answer: skippedWithToken
-        ? "SKIPPED (TOKEN)"
-        : answer || "NO ANSWER",
+      answer: displayAnswer,
+      listCorrect: listScore?.correct ?? null,
+      listTotal: listScore?.total ?? null,
       hit,
       shielded,
       shieldGranted: passed && isHardQuestion,
@@ -1414,6 +1519,9 @@ io.on("connection", (socket) => {
 
     if (!room || room.phase !== "question") return;
 
+    // List questions use submitListItem/lockListAnswer instead.
+    if (room.currentQuestion?.type === "list") return;
+
     const player = findMember(room, socket.data.token);
 
     if (
@@ -1426,13 +1534,140 @@ io.on("connection", (socket) => {
     }
 
     room.submitted.set(player.token, {
-      answer: String(answer || "").slice(0, 1200)
+      answer: String(answer || "").slice(0, 1200),
+      items: [],
+      locked: true
     });
 
     socket.emit("answerAccepted");
 
     // Only tell clients that this player's submission changed.
     // Do not rebuild question content.
+    emitRoom(room);
+
+    if (allLivingPlayersSubmitted(room)) {
+      revealQuestion(room);
+    }
+  });
+
+  socket.on("submitListItem", (item) => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.phase !== "question") return;
+    if (room.currentQuestion?.type !== "list") return;
+
+    const player = findMember(room, socket.data.token);
+
+    if (!player || player.role !== "player" || player.dead) return;
+
+    const entry =
+      room.submitted.get(player.token) ||
+      { answer: "", items: [], results: [], locked: false };
+
+    if (!entry.results) entry.results = [];
+
+    if (entry.locked) return;
+
+    const cleaned = String(item || "")
+      .replace(/[\r\n\t,]/g, " ")
+      .trim()
+      .slice(0, 60);
+
+    if (!cleaned) return;
+    if (entry.items.length >= 60) return;
+
+    const normalizedCleaned = normalizeAnswer(cleaned);
+
+    const alreadyHave = entry.items.some(
+      (existing) =>
+        normalizeAnswer(existing) === normalizedCleaned
+    );
+
+    if (!alreadyHave) {
+      const rules = getRules(room);
+
+      const correct = itemMatchesAnyAccepted(
+        cleaned,
+        room.currentQuestion,
+        rules.typoTolerance
+      );
+
+      entry.items.push(cleaned);
+      entry.results.push(correct);
+    }
+
+    entry.answer = entry.items.join(", ");
+    room.submitted.set(player.token, entry);
+
+    socket.emit("listItemAdded", {
+      items: entry.items,
+      results: entry.results
+    });
+
+    emitRoom(room);
+  });
+
+  socket.on("removeListItem", (item) => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.phase !== "question") return;
+    if (room.currentQuestion?.type !== "list") return;
+
+    const player = findMember(room, socket.data.token);
+
+    if (!player || player.role !== "player" || player.dead) return;
+
+    const entry = room.submitted.get(player.token);
+
+    if (!entry || entry.locked) return;
+
+    const normalizedTarget = normalizeAnswer(String(item || ""));
+
+    const index = entry.items.findIndex(
+      (existing) =>
+        normalizeAnswer(existing) === normalizedTarget
+    );
+
+    if (index === -1) return;
+
+    entry.items.splice(index, 1);
+
+    if (Array.isArray(entry.results)) {
+      entry.results.splice(index, 1);
+    }
+
+    entry.answer = entry.items.join(", ");
+    room.submitted.set(player.token, entry);
+
+    socket.emit("listItemAdded", {
+      items: entry.items,
+      results: entry.results || []
+    });
+
+    emitRoom(room);
+  });
+
+  socket.on("lockListAnswer", () => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.phase !== "question") return;
+    if (room.currentQuestion?.type !== "list") return;
+
+    const player = findMember(room, socket.data.token);
+
+    if (!player || player.role !== "player" || player.dead) return;
+
+    const entry =
+      room.submitted.get(player.token) ||
+      { answer: "", items: [], locked: false };
+
+    if (entry.locked) return;
+
+    entry.locked = true;
+    room.submitted.set(player.token, entry);
+
+    socket.emit("answerAccepted");
+
     emitRoom(room);
 
     if (allLivingPlayersSubmitted(room)) {

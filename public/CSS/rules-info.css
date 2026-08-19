@@ -1,7 +1,7 @@
 .rules-widget {
   position: fixed;
   left: 16px;
-  top: 16px;
+  bottom: 16px;
   z-index: 85;
 }
 
@@ -158,7 +158,7 @@
 @media (max-width: 650px) {
   .rules-widget {
     left: 10px;
-    top: 10px;
+    bottom: 10px;
   }
 
   .rules-toggle {

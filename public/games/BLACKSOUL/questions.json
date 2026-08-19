@@ -1,7 +1,6 @@
 {
   "id": "blacksoul",
   "name": "BLACKSOUL",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF BLACKSOUL TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

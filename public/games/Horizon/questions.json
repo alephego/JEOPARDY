@@ -1,7 +1,6 @@
 {
   "id": "horizon",
   "name": "Horizon",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF HORIZON TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

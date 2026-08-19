@@ -1,7 +1,6 @@
 {
   "id": "deltarune",
   "name": "DELTARUNE",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF DELTARUNE TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",

@@ -1,7 +1,6 @@
 {
   "id": "cult-of-the-lamb",
   "name": "Cult of the Lamb",
-  "description": "REPLACE WITH A SHORT DESCRIPTION OF CULT OF THE LAMB TRIVIA",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",
