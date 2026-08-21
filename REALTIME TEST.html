@@ -1,0 +1,1 @@
+Put images here and reference them as media/images/filename.ext

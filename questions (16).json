@@ -1,6 +1,6 @@
 {
-  "id": "blacksoul",
-  "name": "BLACKSOUL",
+  "id": "lies-of-p",
+  "name": "Lies of P",
   "theme": {
     "background": "games/ASTLIBRA/background.jpg",
     "accent": "#39d353",
@@ -16,7 +16,7 @@
   },
   "questions": [
     {
-      "id": "blacksoul__astlibra-mc-001",
+      "id": "lies-of-p__astlibra-mc-001",
       "type": "multiple-choice",
       "timer": 30,
       "damage": 1,
@@ -33,7 +33,7 @@
       ]
     },
     {
-      "id": "blacksoul__astlibra-id-001",
+      "id": "lies-of-p__astlibra-id-001",
       "type": "identification",
       "timer": 60,
       "damage": 1,
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "id": "blacksoul__astlibra-list-001",
+      "id": "lies-of-p__astlibra-list-001",
       "type": "list",
       "timer": 90,
       "damage": 2,
