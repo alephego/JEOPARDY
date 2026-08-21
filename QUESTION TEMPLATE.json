@@ -1,26 +1,19 @@
 {
-  "id": "child-of-light",
-  "name": "Child of Light",
+  "id": "game-id",
+  "name": "Game Name",
   "theme": {
-    "background": "games/ASTLIBRA/background.jpg",
-    "accent": "#39d353",
-    "accent2": "#ffd23f",
-    "animation": "spark"
-  },
-  "rules": {
-    "hardQuestionDamage": 2,
-    "reviveRoundsRequired": 2,
-    "reviveHpPercent": 0.5,
-    "teamHealAmount": 1,
-    "pointsPerDamage": 10
+    "background": "background.jpg",
+    "accent": "#735cff",
+    "accent2": "#16d8ff",
+    "animation": "scan"
   },
   "questions": [
     {
-      "id": "child-of-light__astlibra-mc-001",
+      "id": "q001",
       "type": "multiple-choice",
       "timer": 30,
       "damage": 1,
-      "question": "REPLACE THIS MULTIPLE-CHOICE QUESTION",
+      "question": "YOUR QUESTION HERE",
       "media": [],
       "choices": {
         "A": "ANSWER A",
@@ -28,34 +21,30 @@
         "C": "ANSWER C",
         "D": "ANSWER D"
       },
-      "answers": [
-        "A"
-      ]
+      "answers": ["A"]
     },
     {
-      "id": "child-of-light__astlibra-id-001",
+      "id": "q002",
       "type": "identification",
       "timer": 60,
       "damage": 1,
-      "question": "REPLACE THIS IDENTIFICATION QUESTION",
-      "media": [],
-      "answers": [
-        "REPLACE_ME"
-      ]
+      "question": "IDENTIFY THIS",
+      "media": [
+        {
+          "type": "image",
+          "src": "images/example.jpg"
+        }
+      ],
+      "answers": ["CORRECT ANSWER", "ALTERNATE ANSWER"]
     },
     {
-      "id": "child-of-light__astlibra-list-001",
+      "id": "q003",
       "type": "list",
       "timer": 90,
       "damage": 2,
-      "points": 30,
-      "question": "REPLACE THIS LIST QUESTION",
+      "question": "NAME AS MANY AS YOU CAN",
       "media": [],
-      "answers": [
-        "ANSWER 1",
-        "ANSWER 2",
-        "ANSWER 3"
-      ]
+      "answers": ["ANSWER 1", "ANSWER 2", "ANSWER 3"]
     }
   ]
 }

@@ -306,6 +306,10 @@ const LIST_WRONG_DAMAGE = 1;   // flat HP lost per wrong guess, applied immediat
 const LIST_WRONG_CAP = 3;      // wrong guesses allowed before you're locked out of the question
 const LIST_MAX_DAMAGE_PER_QUESTION = 3; // hard ceiling — never exceeded no matter how listWrongDamage/listWrongCap are configured
 
+// --- Team synergy: everyone gets healed when enough players nail the same question ---
+const TEAM_SYNERGY_MIN_CORRECT = 2; // this many correct answers on one question triggers it
+const TEAM_SYNERGY_HEAL_AMOUNT = 1; // flat team-wide heal when it triggers
+
 // Scores a list answer against the accepted list. Each submitted item can
 // only match one accepted answer (no double-counting the same item twice
 // via near-duplicate phrasing), and returns how many DISTINCT accepted

@@ -1,61 +1,26 @@
-{
-  "id": "blacksoul",
-  "name": "BLACKSOUL",
-  "theme": {
-    "background": "games/ASTLIBRA/background.jpg",
-    "accent": "#39d353",
-    "accent2": "#ffd23f",
-    "animation": "spark"
-  },
-  "rules": {
-    "hardQuestionDamage": 2,
-    "reviveRoundsRequired": 2,
-    "reviveHpPercent": 0.5,
-    "teamHealAmount": 1,
-    "pointsPerDamage": 10
-  },
-  "questions": [
-    {
-      "id": "blacksoul__astlibra-mc-001",
-      "type": "multiple-choice",
-      "timer": 30,
-      "damage": 1,
-      "question": "REPLACE THIS MULTIPLE-CHOICE QUESTION",
-      "media": [],
-      "choices": {
-        "A": "ANSWER A",
-        "B": "ANSWER B",
-        "C": "ANSWER C",
-        "D": "ANSWER D"
-      },
-      "answers": [
-        "A"
-      ]
-    },
-    {
-      "id": "blacksoul__astlibra-id-001",
-      "type": "identification",
-      "timer": 60,
-      "damage": 1,
-      "question": "REPLACE THIS IDENTIFICATION QUESTION",
-      "media": [],
-      "answers": [
-        "REPLACE_ME"
-      ]
-    },
-    {
-      "id": "blacksoul__astlibra-list-001",
-      "type": "list",
-      "timer": 90,
-      "damage": 2,
-      "points": 30,
-      "question": "REPLACE THIS LIST QUESTION",
-      "media": [],
-      "answers": [
-        "ANSWER 1",
-        "ANSWER 2",
-        "ANSWER 3"
-      ]
-    }
-  ]
-}
+# Railway
+
+The GitHub repository root must contain:
+
+- package.json
+- package-lock.json
+- railpack.json
+- Procfile
+- server.js
+- public/
+
+Railway should deploy the repository root.
+
+Start command:
+    node server.js
+
+Build/install:
+    npm install
+
+If Railway says "No start command detected", check:
+1. The GitHub repository root contains package.json.
+2. Railway Root Directory is blank / `/`.
+3. There is no extra nested project folder.
+
+Do not upload the ZIP itself as the app.
+Do not commit node_modules.

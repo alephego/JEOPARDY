@@ -1,61 +1,40 @@
-{
-  "id": "elden-ring",
-  "name": "Elden Ring",
-  "theme": {
-    "background": "games/ASTLIBRA/background.jpg",
-    "accent": "#39d353",
-    "accent2": "#ffd23f",
-    "animation": "spark"
-  },
-  "rules": {
-    "hardQuestionDamage": 2,
-    "reviveRoundsRequired": 2,
-    "reviveHpPercent": 0.5,
-    "teamHealAmount": 1,
-    "pointsPerDamage": 10
-  },
-  "questions": [
-    {
-      "id": "elden-ring__astlibra-mc-001",
-      "type": "multiple-choice",
-      "timer": 30,
-      "damage": 1,
-      "question": "REPLACE THIS MULTIPLE-CHOICE QUESTION",
-      "media": [],
-      "choices": {
-        "A": "ANSWER A",
-        "B": "ANSWER B",
-        "C": "ANSWER C",
-        "D": "ANSWER D"
-      },
-      "answers": [
-        "A"
-      ]
-    },
-    {
-      "id": "elden-ring__astlibra-id-001",
-      "type": "identification",
-      "timer": 60,
-      "damage": 1,
-      "question": "REPLACE THIS IDENTIFICATION QUESTION",
-      "media": [],
-      "answers": [
-        "REPLACE_ME"
-      ]
-    },
-    {
-      "id": "elden-ring__astlibra-list-001",
-      "type": "list",
-      "timer": 90,
-      "damage": 2,
-      "points": 30,
-      "question": "REPLACE THIS LIST QUESTION",
-      "media": [],
-      "answers": [
-        "ANSWER 1",
-        "ANSWER 2",
-        "ANSWER 3"
-      ]
-    }
-  ]
-}
+# Online deployment
+
+## Railway
+
+Repository root should contain:
+
+- `package.json`
+- `package-lock.json`
+- `railpack.json`
+- `server.js`
+- `public/`
+
+Build command:
+
+`npm install`
+
+Start command:
+
+`npm start`
+
+The project also contains an explicit Railpack start command in `railpack.json`.
+
+## Render
+
+Create a Web Service.
+
+Build command:
+
+`npm install`
+
+Start command:
+
+`npm start`
+
+Use the generated public URL for GM/player testing.
+
+## Important
+
+Room state is held in server memory in this version. A server restart removes active rooms.
+That is acceptable for the current multiplayer prototype. A later production version can use Redis/database storage for persistent rooms.

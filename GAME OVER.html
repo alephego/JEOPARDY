@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JEOPARDY - Game Over</title>
+  <link rel="stylesheet" href="CSS/app.css">
+  <link rel="stylesheet" href="CSS/reactions.css">
+<link rel="stylesheet" href="CSS/rules-info.css"></head>
+<body>
+  <main class="screen center">
+    <section id="panel" class="panel game-over-panel">
+      <div id="eyebrow" class="eyebrow">GAUNTLET COMPLETE</div>
+      <h1 id="title">GAME OVER</h1>
+
+      <p id="reason" class="subtitle"></p>
+
+      <div class="section-label">FINAL STATUS</div>
+      <div id="playersFinal" class="final-player-grid"></div>
+
+      <div id="chartSection" class="chart-section hidden">
+        <div class="section-label">POINTS OVER TIME — WHO WAS COOKING</div>
+        <div id="chartLegend" class="chart-legend"></div>
+        <div id="chartWrap" class="chart-wrap"></div>
+      </div>
+
+      <div id="loserLabel" class="section-label">FELL IN THE GAUNTLET</div>
+      <div id="losers" class="loser-list"></div>
+
+      <button id="returnLobby" class="btn primary">
+        RETURN TO HUB
+      </button>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="JS/gameover.js"></script><script src="JS/rules-info.js"></script>
+  <script src="JS/reactions.js"></script>
+</body>
+</html>
