@@ -223,6 +223,43 @@
   line-height: 1.4;
 }
 
+.gift-wrap {
+  margin: 22px 0;
+  padding: 18px;
+  border: 1px solid rgba(49, 225, 147, .28);
+  border-radius: 16px;
+  background: rgba(49, 225, 147, .04);
+  text-align: left;
+}
+
+.gift-wrap.hidden {
+  display: none !important;
+}
+
+.gift-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.gift-row input {
+  width: 100px;
+  flex: 0 0 auto;
+}
+
+.gift-row .btn {
+  flex: 1;
+  padding: 12px 10px;
+  font-size: 12px;
+}
+
+.gift-hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 @media (max-width: 650px) {
   .shop-item-grid {
     grid-template-columns: 1fr;

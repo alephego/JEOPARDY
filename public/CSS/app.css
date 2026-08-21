@@ -345,6 +345,95 @@ input:focus,
 .vote-status { min-height: 24px; margin-top: 18px; color: var(--muted); text-align: center; }
 
 .game-over-panel { max-width: 720px; text-align: center; }
+
+.chart-section {
+  margin: 28px 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .02);
+}
+
+.chart-section.hidden {
+  display: none !important;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  justify-content: center;
+  margin: 10px 0 6px;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.chart-wrap {
+  width: 100%;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-grid-line {
+  stroke: rgba(255, 255, 255, .06);
+  stroke-width: 1;
+}
+
+.chart-axis-line {
+  stroke: rgba(255, 255, 255, .16);
+  stroke-width: 1.5;
+}
+
+.chart-axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chart-line {
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  animation: chartLineDraw 1.1s ease forwards;
+  animation-delay: var(--line-delay, 0s);
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+@keyframes chartLineDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+.chart-end-dot {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: chartDotPop .4s ease forwards;
+  animation-delay: var(--dot-delay, .7s);
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+@keyframes chartDotPop {
+  0% { opacity: 0; transform: scale(0); }
+  70% { opacity: 1; transform: scale(1.4); }
+  100% { opacity: 1; transform: scale(1); }
+}
 .loser-list { display: grid; gap: 12px; margin-top: 24px; }
 .loser-card { padding: 20px; border: 1px solid rgba(255,93,120,.35); border-radius: 16px; background: rgba(255,93,120,.05); }
 .loser-card strong { display: block; font-size: 24px; }

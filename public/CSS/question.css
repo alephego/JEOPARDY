@@ -297,6 +297,59 @@ body {
   flex: 0 0 auto;
 }
 
+.list-wrong-status {
+  min-height: 18px;
+  margin-top: 10px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-align: left;
+}
+
+.list-wrong-status-capped {
+  color: var(--red);
+}
+
+.list-team-finds-wrap {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.list-team-finds {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.list-team-find-entry {
+  display: flex;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(49,225,147,.06);
+  border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+  font-size: 12px;
+  animation: listTeamFindIn .3s ease;
+}
+
+.list-team-find-entry strong {
+  color: var(--green);
+}
+
+.list-team-find-entry span {
+  color: var(--muted);
+}
+
+@keyframes listTeamFindIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
 .list-chips {
   display: flex;
   flex-wrap: wrap;
@@ -901,6 +954,49 @@ body {
 @keyframes pausedBannerPulse{
   0%, 100% { opacity: 1; }
   50% { opacity: .7; }
+}
+
+.synergy-banner{
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  padding: 14px 28px;
+  border-radius: 999px;
+  border: 2px solid var(--green);
+  background: rgba(3,7,16,.94);
+  color: var(--green);
+  font-weight: 1000;
+  letter-spacing: .06em;
+  font-size: 13px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 0 30px rgba(49,225,147,.35);
+}
+
+.synergy-banner.hidden{
+  display: none !important;
+}
+
+.synergy-banner-pop{
+  animation: synergyBannerPop .6s cubic-bezier(.2,.9,.3,1.3);
+}
+
+@keyframes synergyBannerPop{
+  0% { transform: translateX(-50%) scale(.5); opacity: 0; }
+  60% { transform: translateX(-50%) scale(1.08); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+@media(max-width: 650px){
+  .synergy-banner{
+    top: 80px;
+    font-size: 11px;
+    padding: 11px 16px;
+    white-space: normal;
+    width: min(320px, 92vw);
+  }
 }
 
 .gm-btn-reveal.ready{

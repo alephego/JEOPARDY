@@ -44,6 +44,10 @@ const elements = {
     document.getElementById("listAdd"),
   listChips:
     document.getElementById("listChips"),
+  listWrongStatus:
+    document.getElementById("listWrongStatus"),
+  listTeamFinds:
+    document.getElementById("listTeamFinds"),
   listSubmit:
     document.getElementById("listSubmit"),
   identificationSubmit:
@@ -200,6 +204,36 @@ socket.on(
 
     elements.status.className =
       "status success";
+  }
+);
+
+socket.on(
+  "teamSynergy",
+  ({ count, healAmount }) => {
+    const banner = document.getElementById(
+      "synergyBanner"
+    );
+
+    if (!banner) return;
+
+    banner.textContent =
+      `⚡ TEAM SYNERGY! ${count} PLAYERS NAILED IT — +${healAmount} HP FOR EVERYONE`;
+
+    banner.classList.remove("hidden");
+    banner.classList.remove(
+      "synergy-banner-pop"
+    );
+
+    // Force reflow so the animation replays if it fires again quickly.
+    void banner.offsetWidth;
+
+    banner.classList.add(
+      "synergy-banner-pop"
+    );
+
+    setTimeout(() => {
+      banner.classList.add("hidden");
+    }, 3200);
   }
 );
 
@@ -787,6 +821,11 @@ function resetAnswerInputs() {
 
   myListItems = [];
   elements.listChips.innerHTML = "";
+  elements.listTeamFinds.innerHTML = "";
+  elements.listWrongStatus.textContent = "";
+  elements.listWrongStatus.classList.remove(
+    "list-wrong-status-capped"
+  );
 
   document
     .querySelectorAll(
@@ -1013,11 +1052,73 @@ function addListItem() {
 
 socket.on(
   "listItemAdded",
-  ({ items, results }) => {
+  ({ items, results, lockedOut }) => {
     renderListChips(
       Array.isArray(items) ? items : [],
       Array.isArray(results) ? results : []
     );
+
+    if (lockedOut) {
+      elements.listInput.disabled = true;
+      elements.listAdd.disabled = true;
+      elements.listSubmit.disabled = true;
+
+      elements.listWrongStatus.textContent =
+        "NO MORE GUESSES — WRONG CAP REACHED";
+
+      elements.listWrongStatus.classList.add(
+        "list-wrong-status-capped"
+      );
+    }
+  }
+);
+
+socket.on(
+  "listWrongGuess",
+  ({ damage, shielded, wrongCount, wrongCap }) => {
+    if (elements.listWrongStatus.classList.contains(
+      "list-wrong-status-capped"
+    )) {
+      return;
+    }
+
+    elements.listWrongStatus.textContent =
+      shielded
+        ? `🛡 SHIELDED — NO DAMAGE (${wrongCount}/${wrongCap} WRONG)`
+        : `-${damage} HP (${wrongCount}/${wrongCap} WRONG)`;
+
+    elements.listWrongStatus.classList.remove(
+      "list-wrong-status-capped"
+    );
+  }
+);
+
+socket.on(
+  "teamListFind",
+  ({ name, item }) => {
+    const entry =
+      document.createElement("div");
+
+    entry.className =
+      "list-team-find-entry";
+
+    entry.innerHTML = `
+      <strong>${escapeHtml(name)}</strong>
+      <span>found "${escapeHtml(item)}"</span>
+    `;
+
+    elements.listTeamFinds.prepend(
+      entry
+    );
+
+    while (
+      elements.listTeamFinds.children
+        .length > 12
+    ) {
+      elements.listTeamFinds.removeChild(
+        elements.listTeamFinds.lastChild
+      );
+    }
   }
 );
 

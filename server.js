@@ -302,6 +302,9 @@ function questionPassed(question, answer, typoTolerance = true) {
 }
 
 const LIST_ALL_REQUIRED_THRESHOLD = 5;
+const LIST_WRONG_DAMAGE = 1;   // flat HP lost per wrong guess, applied immediately
+const LIST_WRONG_CAP = 3;      // wrong guesses allowed before you're locked out of the question
+const LIST_MAX_DAMAGE_PER_QUESTION = 3; // hard ceiling — never exceeded no matter how listWrongDamage/listWrongCap are configured
 
 // Scores a list answer against the accepted list. Each submitted item can
 // only match one accepted answer (no double-counting the same item twice
@@ -405,7 +408,29 @@ function getRules(room) {
     ),
     shopPrices: (custom.shopPrices && typeof custom.shopPrices === "object")
       ? custom.shopPrices
-      : {}
+      : {},
+    listWrongDamage: Math.max(
+      0,
+      Number(custom.listWrongDamage ?? LIST_WRONG_DAMAGE)
+    ),
+    listWrongCap: Math.max(
+      1,
+      Number(custom.listWrongCap ?? LIST_WRONG_CAP)
+    ),
+    listMaxDamagePerQuestion: Math.max(
+      0,
+      Number(
+        custom.listMaxDamagePerQuestion ?? LIST_MAX_DAMAGE_PER_QUESTION
+      )
+    ),
+    teamSynergyMinCorrect: Math.max(
+      2,
+      Number(custom.teamSynergyMinCorrect ?? TEAM_SYNERGY_MIN_CORRECT)
+    ),
+    teamSynergyHealAmount: Math.max(
+      0,
+      Number(custom.teamSynergyHealAmount ?? TEAM_SYNERGY_HEAL_AMOUNT)
+    )
   };
 }
 
@@ -501,6 +526,9 @@ function createRoom(name, token) {
 
     submitted: new Map(),
     revealedAnswers: [],
+    newlyDownThisQuestion: new Set(),
+
+    statsHistory: [],
 
     usedQuestions: new Set(),
 
@@ -700,6 +728,7 @@ function beginQuestion(room) {
 
   room.submitted = new Map();
   room.revealedAnswers = [];
+  room.newlyDownThisQuestion = new Set();
 
   room.paused = false;
   room.pausedField = null;
@@ -865,7 +894,8 @@ function finishGame(room, reason) {
       hp: player.hp,
       points: player.points || 0,
       dead: player.dead
-    }))
+    })),
+    statsHistory: room.statsHistory
   };
 
   emitRoom(room);
@@ -891,6 +921,12 @@ function checkGameOver(room) {
   return false;
 }
 
+function getQuestionPoints(question, rules) {
+  return Number.isFinite(Number(question.points))
+    ? Math.max(0, Number(question.points))
+    : Math.max(1, Number(question.damage || 1)) * rules.pointsPerDamage;
+}
+
 function revealQuestion(room) {
   if (room.phase !== "question") return;
 
@@ -907,30 +943,38 @@ function revealQuestion(room) {
   const isHardQuestion =
     Number(room.currentQuestion.damage || 1) >= rules.hardQuestionDamage;
 
-  const questionPoints = Number.isFinite(
-    Number(room.currentQuestion.points)
-  )
-    ? Math.max(0, Number(room.currentQuestion.points))
-    : Math.max(1, Number(room.currentQuestion.damage || 1)) *
-      rules.pointsPerDamage;
+  const questionPoints = getQuestionPoints(room.currentQuestion, rules);
 
   // Snapshot who was already down BEFORE this round resolves,
   // so we can tell "newly down this round" apart from
-  // "already down, still waiting to revive".
+  // "already down, still waiting to revive". Anyone who went down
+  // LIVE during this question (e.g. a wrong list guess) is excluded
+  // here — they're newly down too, not "already waiting".
   const wasDownBefore = new Set(
     room.members
-      .filter((player) => player.role === "player" && player.dead)
+      .filter(
+        (player) =>
+          player.role === "player" &&
+          player.dead &&
+          !room.newlyDownThisQuestion.has(player.token)
+      )
       .map((player) => player.token)
   );
 
   const outcomes = [];
   let hardRewardEarned = false;
 
+  const isListQuestion =
+    room.currentQuestion.type === "list";
+
   for (const player of room.members) {
     if (player.role !== "player") continue;
 
-    if (player.dead) {
-      // Already down before this round started — they sit this one out.
+    if (
+      player.dead &&
+      !room.newlyDownThisQuestion.has(player.token)
+    ) {
+      // Was down before this round even started — they sat it out.
       outcomes.push({
         id: player.publicId,
         name: player.name,
@@ -951,7 +995,6 @@ function revealQuestion(room) {
 
     const submission = room.submitted.get(player.token);
     const answer = submission?.answer || "";
-    const isListQuestion = room.currentQuestion.type === "list";
 
     const baseDamage = Math.max(
       1,
@@ -1006,28 +1049,16 @@ function revealQuestion(room) {
       damageDealt = baseDamage;
       pointsEarned = 0;
     } else if (listScore.fullyPassed) {
+      // List damage is handled live, per wrong guess, in submitListItem —
+      // never re-applied here. Only points are settled at reveal.
       damageDealt = 0;
       pointsEarned = questionPoints;
-    } else if (listScore.requiresAll) {
-      // 5 or fewer required — all-or-nothing, and this wasn't a full clear.
-      damageDealt = baseDamage;
-      pointsEarned = 0;
     } else {
-      // More than 5 required — scale damage/points by how much of the
-      // list was actually covered. Always at least 1 damage short of
-      // a full clear, never more than the question's base damage.
-      damageDealt =
-        listScore.ratio > 0
-          ? Math.max(
-              1,
-              Math.min(
-                baseDamage,
-                Math.round(baseDamage * (1 - listScore.ratio))
-              )
-            )
-          : baseDamage;
+      damageDealt = 0;
 
-      pointsEarned = Math.round(questionPoints * listScore.ratio);
+      pointsEarned = listScore.requiresAll
+        ? 0
+        : Math.round(questionPoints * listScore.ratio);
     }
 
     let hit = damageDealt > 0;
@@ -1064,6 +1095,14 @@ function revealQuestion(room) {
       hardRewardEarned = true;
     }
 
+    const displayDamage = isListQuestion
+      ? submission?.damageTaken || 0
+      : damageDealt;
+
+    const displayHit = isListQuestion
+      ? displayDamage > 0
+      : hit;
+
     const displayAnswer = skippedWithToken
       ? "SKIPPED (TOKEN)"
       : isListQuestion
@@ -1080,10 +1119,10 @@ function revealQuestion(room) {
       answer: displayAnswer,
       listCorrect: listScore?.correct ?? null,
       listTotal: listScore?.total ?? null,
-      hit,
+      hit: displayHit,
       shielded,
       shieldGranted: passed && isHardQuestion,
-      damage: damageDealt,
+      damage: displayDamage,
       hp: player.hp,
       pointsEarned,
       dead: player.dead,
@@ -1134,6 +1173,38 @@ function revealQuestion(room) {
     }
   }
 
+  // Team synergy: multiple players nailing the SAME question together is
+  // a shared win worth celebrating, separate from individual scoring.
+  // (List questions already have their own live team-find moments, so
+  // this only applies to multiple-choice/identification questions.)
+  let synergyTriggered = false;
+
+  if (!isListQuestion) {
+    const correctCount = outcomes.filter(
+      (outcome) => outcome.passed
+    ).length;
+
+    if (correctCount >= rules.teamSynergyMinCorrect) {
+      synergyTriggered = true;
+
+      for (const player of room.members) {
+        if (player.role === "player" && !player.dead) {
+          player.hp = Math.min(
+            room.startingHp,
+            player.hp + rules.teamSynergyHealAmount
+          );
+        }
+      }
+    }
+  }
+
+  if (synergyTriggered) {
+    io.to(room.code).emit("teamSynergy", {
+      count: outcomes.filter((outcome) => outcome.passed).length,
+      healAmount: rules.teamSynergyHealAmount
+    });
+  }
+
   for (const player of room.members) {
     if (
       player.role === "player" &&
@@ -1157,6 +1228,22 @@ function revealQuestion(room) {
   }
 
   room.revealedAnswers = outcomes;
+
+  room.statsHistory.push({
+    round: room.roundsPlayed,
+    gameName: room.selectedGame
+      ? getGame(room)?.name || room.selectedGame
+      : null,
+    players: room.members
+      .filter((player) => player.role === "player")
+      .map((player) => ({
+        id: player.publicId,
+        name: player.name,
+        points: player.points || 0,
+        hp: player.hp,
+        dead: player.dead
+      }))
+  });
 
   io.to(room.code).emit("reveal", {
     revealId: room.revealId,
@@ -1400,6 +1487,7 @@ io.on("connection", (socket) => {
 
     room.roundsPlayed = 0;
     room.lastShopRound = 0;
+    room.statsHistory = [];
 
     emitRoom(room);
   });
@@ -1562,9 +1650,18 @@ io.on("connection", (socket) => {
 
     const entry =
       room.submitted.get(player.token) ||
-      { answer: "", items: [], results: [], locked: false };
+      {
+        answer: "",
+        items: [],
+        results: [],
+        wrongCount: 0,
+        damageTaken: 0,
+        locked: false
+      };
 
     if (!entry.results) entry.results = [];
+    if (!entry.wrongCount) entry.wrongCount = 0;
+    if (!entry.damageTaken) entry.damageTaken = 0;
 
     if (entry.locked) return;
 
@@ -1583,6 +1680,8 @@ io.on("connection", (socket) => {
         normalizeAnswer(existing) === normalizedCleaned
     );
 
+    let lockedOut = false;
+
     if (!alreadyHave) {
       const rules = getRules(room);
 
@@ -1594,6 +1693,68 @@ io.on("connection", (socket) => {
 
       entry.items.push(cleaned);
       entry.results.push(correct);
+
+      if (correct) {
+        // Correct guesses are a shared team moment — everyone sees them
+        // land, live, as they happen.
+        io.to(room.code).emit("teamListFind", {
+          id: player.publicId,
+          name: player.name,
+          item: cleaned
+        });
+      } else {
+        // Wrong guesses cost a little HP right away, privately — never
+        // enough from one guess alone to take someone out.
+        entry.wrongCount += 1;
+
+        const remainingCeiling = Math.max(
+          0,
+          rules.listMaxDamagePerQuestion - entry.damageTaken
+        );
+
+        let damage = Math.min(
+          rules.listWrongDamage,
+          remainingCeiling
+        );
+
+        let shielded = false;
+
+        if (damage > 0 && player.shield) {
+          shielded = true;
+          damage = 0;
+          player.shield = false;
+        } else if (damage > 0 && player.damageReduction) {
+          damage = Math.max(1, Math.ceil(damage / 2));
+          player.damageReduction = false;
+        }
+
+        if (damage > 0) {
+          player.hp = Math.max(0, player.hp - damage);
+          entry.damageTaken += damage;
+
+          if (player.hp <= 0) {
+            player.dead = true;
+            player.downRounds = 0;
+            room.newlyDownThisQuestion.add(player.token);
+          }
+        }
+
+        socket.emit("listWrongGuess", {
+          item: cleaned,
+          damage,
+          shielded,
+          wrongCount: entry.wrongCount,
+          wrongCap: rules.listWrongCap
+        });
+
+        if (
+          !player.dead &&
+          entry.wrongCount >= rules.listWrongCap
+        ) {
+          entry.locked = true;
+          lockedOut = true;
+        }
+      }
     }
 
     entry.answer = entry.items.join(", ");
@@ -1601,10 +1762,18 @@ io.on("connection", (socket) => {
 
     socket.emit("listItemAdded", {
       items: entry.items,
-      results: entry.results
+      results: entry.results,
+      lockedOut
     });
 
     emitRoom(room);
+
+    if (
+      (player.dead || lockedOut) &&
+      allLivingPlayersSubmitted(room)
+    ) {
+      revealQuestion(room);
+    }
   });
 
   socket.on("removeListItem", (item) => {
@@ -1926,6 +2095,49 @@ io.on("connection", (socket) => {
     // Buying something after marking READY means you're still deciding —
     // don't let the shop end out from under you mid-purchase.
     player.shopReady = false;
+
+    emitRoom(room);
+  });
+
+  socket.on("giftPoints", ({ targetId, amount } = {}) => {
+    const room = rooms.get(socket.data.roomCode);
+
+    if (!room || room.phase !== "shop") return;
+
+    const player = findMember(room, socket.data.token);
+
+    if (!player || player.role !== "player") return;
+
+    const target = room.members.find(
+      (member) =>
+        member.publicId === targetId &&
+        member.role === "player" &&
+        member.token !== player.token
+    );
+
+    if (!target) return;
+
+    const giftAmount = Math.round(Number(amount));
+
+    if (!Number.isFinite(giftAmount) || giftAmount <= 0) return;
+
+    if ((player.points || 0) < giftAmount) {
+      socket.emit(
+        "errorMessage",
+        "You don't have that many points to give."
+      );
+      return;
+    }
+
+    player.points -= giftAmount;
+    target.points = (target.points || 0) + giftAmount;
+
+    // A generous move deserves the whole team seeing it.
+    io.to(room.code).emit("teamGift", {
+      fromName: player.name,
+      toName: target.name,
+      amount: giftAmount
+    });
 
     emitRoom(room);
   });

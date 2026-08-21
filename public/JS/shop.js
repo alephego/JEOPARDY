@@ -44,6 +44,18 @@ const elements = {
   ),
   gmPauseButton: document.getElementById(
     "gmPauseButton"
+  ),
+  giftWrap: document.getElementById(
+    "giftWrap"
+  ),
+  giftTargetSelect: document.getElementById(
+    "giftTargetSelect"
+  ),
+  giftAmount: document.getElementById(
+    "giftAmount"
+  ),
+  giftSend: document.getElementById(
+    "giftSend"
   )
 };
 
@@ -237,8 +249,92 @@ function renderShop(state) {
 
   renderTeamPoints(state);
   renderReadyState(state, me, isPlayer);
+  renderGiftPanel(state, me, isPlayer);
   renderGmAdmin(state, me);
 }
+
+function renderGiftPanel(state, me, isPlayer) {
+  const teammates = state.members.filter(
+    (player) =>
+      player.role === "player" &&
+      player.id !== selfId
+  );
+
+  const canGift =
+    isPlayer && !me?.dead && teammates.length > 0;
+
+  elements.giftWrap.classList.toggle(
+    "hidden",
+    !canGift
+  );
+
+  if (!canGift) return;
+
+  const previousSelection =
+    elements.giftTargetSelect.value;
+
+  elements.giftTargetSelect.innerHTML = teammates
+    .map(
+      (player) =>
+        `<option value="${player.id}">
+          ${escapeHtml(player.name)}
+          ${
+            player.dead
+              ? "(DOWN)"
+              : `(${player.points || 0} PTS)`
+          }
+        </option>`
+    )
+    .join("");
+
+  if (
+    teammates.some(
+      (player) => player.id === previousSelection
+    )
+  ) {
+    elements.giftTargetSelect.value =
+      previousSelection;
+  }
+}
+
+elements.giftSend.addEventListener(
+  "click",
+  () => {
+    const targetId =
+      elements.giftTargetSelect.value;
+
+    const amount = Number(
+      elements.giftAmount.value
+    );
+
+    if (!targetId || !Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
+
+    socket.emit("giftPoints", {
+      targetId,
+      amount
+    });
+  }
+);
+
+socket.on(
+  "teamGift",
+  ({ fromName, toName, amount }) => {
+    elements.message.textContent =
+      `${fromName} gifted ${amount} points to ${toName}! 🎁`;
+
+    setTimeout(() => {
+      if (
+        elements.message.textContent.startsWith(
+          fromName
+        )
+      ) {
+        elements.message.textContent = "";
+      }
+    }, 4000);
+  }
+);
 
 function renderReadyState(state, me, isPlayer) {
   if (!isPlayer) {

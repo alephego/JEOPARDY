@@ -14,9 +14,11 @@
 
   <div id="pausedBanner" class="paused-banner hidden">⏸ PAUSED BY GM</div>
 
+  <div id="synergyBanner" class="synergy-banner hidden"></div>
+
   <main class="question-screen">
     <header class="question-hud">
-      <div class="brand">JEOPARDY <span class="build-tag">BUILD 16</span></div>
+      <div class="brand">JEOPARDY <span class="build-tag">BUILD 19</span></div>
       <div class="hud-block"><span>GAME</span><strong id="game">---</strong></div>
       <div class="hud-block"><span>QUESTION</span><strong id="qn">1</strong></div>
       <div class="hud-block"><span>DAMAGE</span><strong id="damage">1 HP</strong></div>
@@ -47,9 +49,15 @@
           <input id="listInput" placeholder="TYPE ONE ANSWER, THEN ADD..." autocomplete="off">
           <button id="listAdd" class="submit list-add-btn">ADD</button>
         </div>
+        <div id="listWrongStatus" class="list-wrong-status"></div>
         <div id="listChips" class="list-chips"></div>
         <button id="listSubmit" class="submit">LOCK IN ANSWERS</button>
         <small>Add as many as you can, one at a time, then lock in when you're done.</small>
+
+        <div class="list-team-finds-wrap">
+          <div class="section-label">TEAM FINDS</div>
+          <div id="listTeamFinds" class="list-team-finds"></div>
+        </div>
       </div>
 
       <div id="ident" class="answer-area hidden">
